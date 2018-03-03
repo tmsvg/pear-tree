@@ -64,26 +64,17 @@ if !hasmapto('<Plug>PearTreeBackspace', 'i')
     imap <BS> <Plug>PearTreeBackspace
 endif
 
-if !hasmapto('<Plug>PearTreeJump', 'i')
-    imap <C-l> <Plug>PearTreeJump
-endif
-
-if !hasmapto('<Plug>PearTreeJNR', 'i')
-    imap <C-j> <Plug>PearTreeJNR
-endif
-
 if !hasmapto('<Plug>PearTreeExpand', 'i')
     imap <CR> <Plug>PearTreeExpand
-endif
-
-if !hasmapto('<Plug>PearTreeOnceExpand', 'i')
-    imap <C-j> <Plug>PearTreeOnceExpand
 endif
 
 if !hasmapto('<Plug>PearTreeFinishExpansion', 'i')
     imap <ESC> <Plug>PearTreeFinishExpansion
 endif
 
+if !hasmapto('<Plug>PearTreeJump', 'i')
+    imap <C-l> <Plug>PearTreeJump
+endif
 
 augroup pear-tree
     autocmd!
