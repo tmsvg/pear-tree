@@ -54,6 +54,8 @@ Type `<CR>`:
 5  int bar();
 ```
 
+Note that the closing pair disappears after pressing `<CR>`. This is required to not break dot-repeat, but it will be reentered upon `<Plug>PearTreeFinishExpansion` (see [Mappings](#mappings)).
+
 Next, type `return 1;` and leave insert mode:
 
 ```c
@@ -76,7 +78,6 @@ Finally, move to line 5 and use the `.` command:
 7  }
 ```
 
-Note that the closing pair disappears after pressing `<CR>`. This is required to not break dot-repeat, but it will be reentered upon `<Plug>PearTreeFinishExpansion` (see [Mappings](#mappings)).
 
 Usage
 -------
@@ -132,7 +133,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
 ### Mappings
 
 - `<Plug>PearTreeBackspace`
-    - If cursor is between an opener and delimiter, delete both; otherwise behaves like typical backspace.
+    - If cursor is between an opener and delimiter, delete both. Otherwise, act like typical backspace.
     - Example: `return foo(|)` --> `return foo|`
     - Default mapping: `<BS>`
 
@@ -194,7 +195,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
         ```html
         1  <html>
         2      <body>
-        3           <p>Type this then move to next line.</p>
+        3           <p>Type this and go to next line.</p>
         4           |
         5
         ```
