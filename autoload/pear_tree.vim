@@ -14,6 +14,10 @@ function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
     if has_key(l:delim_dict, 'not_if')
                 \ && index(get(l:delim_dict, 'not_if'), a:wildcard_part) > -1
         return ''
+    " Handle the `not_in` rule.
+    elseif has_key(l:delim_dict, 'not_in')
+                \ && index(get(l:delim_dict, 'not_in'), pear_tree#cursor#SyntaxRegion()) > -1
+        return ''
     endif
     " Handle the `until` rule.
     if has_key(l:delim_dict, 'until')
@@ -57,7 +61,6 @@ endfunction
 
 
 function! pear_tree#HandleTrivialPair(char) abort
-    let l:closer_string = pear_tree#GetDelimiter(a:char)
     let l:char_after_cursor = pear_tree#cursor#CharAfter()
     let l:char_before_cursor = pear_tree#cursor#CharBefore()
     " Define situations in which Pear Tree is permitted to match.
@@ -69,10 +72,11 @@ function! pear_tree#HandleTrivialPair(char) abort
     "   5. Before a bracket-type character
     " then we may match the entered character.
     if pear_tree#cursor#OnEmptyLine()
-                \ || (pear_tree#cursor#AtEndOfLine() && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') >= 0))
-                \ || (l:char_after_cursor =~# '\s' && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') >= 0))
+                \ || (pear_tree#cursor#AtEndOfLine() && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1))
+                \ || (l:char_after_cursor =~# '\s' && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1))
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
                 \ || pear_tree#NextIsBracket()
+        let l:closer_string = pear_tree#GenerateDelimiter(a:char, '')
         call pear_tree#insert_mode#Ignore(strlen(a:char . l:closer_string))
         return a:char . l:closer_string . repeat(s:undo_joiner . "\<Left>", pear_tree#util#VisualStringLength(l:closer_string))
     else
@@ -92,16 +96,6 @@ function! pear_tree#OnPressDelimiter(char) abort
 endfunction
 
 
-function! pear_tree#HandleRules(opener) abort
-    let l:delim_dict = get(b:pear_tree_pairs, a:opener)
-    if has_key(l:delim_dict, 'not_in')
-                \ && index(get(l:delim_dict, 'not_in'), pear_tree#cursor#SyntaxRegion()) >= 0
-        return 0
-    endif
-    return 1
-endfunction
-
-
 " Called when pressing the last letter in an opener string.
 function! pear_tree#TerminateOpener(char) abort
     " If we entered a 'trivial' pair and are not currently typing a longer
@@ -114,8 +108,6 @@ function! pear_tree#TerminateOpener(char) abort
                     \ )
         if pear_tree#IsDumbPair(a:char)
             return pear_tree#OnPressDelimiter(a:char)
-        elseif !pear_tree#HandleRules(a:char)
-            return a:char
         else
             return pear_tree#HandleTrivialPair(a:char)
         endif
@@ -128,9 +120,6 @@ function! pear_tree#TerminateOpener(char) abort
     elseif l:traverser.StepToChild(a:char)
         if l:traverser.AtEndOfString()
             let l:opener = l:traverser.GetString()
-            if !pear_tree#HandleRules(l:opener)
-                return a:char
-            endif
             let l:closer_string = pear_tree#GenerateDelimiter(l:opener, l:traverser.GetWildcardString())
             let l:closer_str_len = pear_tree#util#VisualStringLength(l:closer_string)
             " The key handler should ignore these key presses
@@ -226,7 +215,7 @@ function! pear_tree#PairsInText(text, start, end) abort
         for [l:closer, l:i] in reverse(l:openers[l:key])
             if l:closer ==# l:key
                 " 'Dumb' pair
-                let l:index = stridx(a:text, l:closer, l:i + 1)
+                let l:index = stridx(a:text, l:closer, l:i)
             else
                 let l:index = stridx(a:text, l:closer, l:index + 1)
             endif

@@ -14,9 +14,9 @@ endif
 
 if !exists('g:pear_tree_pairs')
     let g:pear_tree_pairs = {
-                \ '(': {'delimiter': ')', 'not_in': ['String']},
-                \ '[': {'delimiter': ']', 'not_in': ['String']},
-                \ '{': {'delimiter': '}', 'not_in': ['String']},
+                \ '(': {'delimiter': ')'},
+                \ '[': {'delimiter': ']'},
+                \ '{': {'delimiter': '}'},
                 \ "'": {'delimiter': "'", 'not_in': ['String']},
                 \ '"': {'delimiter': '"', 'not_in': ['String']}
                 \ }
