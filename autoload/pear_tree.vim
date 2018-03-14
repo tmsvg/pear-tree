@@ -77,7 +77,6 @@ function! pear_tree#HandleTrivialPair(char) abort
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
                 \ || pear_tree#NextIsBracket()
         let l:closer_string = pear_tree#GenerateDelimiter(a:char, '')
-        call pear_tree#insert_mode#Ignore(strlen(a:char . l:closer_string))
         return a:char . l:closer_string . repeat(s:undo_joiner . "\<Left>", pear_tree#util#VisualStringLength(l:closer_string))
     else
         return a:char
@@ -122,8 +121,6 @@ function! pear_tree#TerminateOpener(char) abort
             let l:opener = l:traverser.GetString()
             let l:closer_string = pear_tree#GenerateDelimiter(l:opener, l:traverser.GetWildcardString())
             let l:closer_str_len = pear_tree#util#VisualStringLength(l:closer_string)
-            " The key handler should ignore these key presses
-            call pear_tree#insert_mode#Ignore(l:closer_str_len)
             let l:closer_string = a:char . l:closer_string . repeat(s:undo_joiner . "\<Left>", l:closer_str_len)
             return l:closer_string
         else

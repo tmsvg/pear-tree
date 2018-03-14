@@ -16,26 +16,6 @@ function! pear_tree#trie#New() abort
         let l:current.is_end_of_string = 1
     endfunction
 
-    function! l:obj.Search(str) abort
-        let l:result = l:self.SearchNode(a:str)
-        return l:result != {} && l:result.is_end_of_string
-    endfunction
-
-    function! l:obj.HasPrefix(str) abort
-        return l:self.SearchNode(a:str) != {}
-    endfunction
-
-    function! l:obj.SearchNode(str) abort
-        let l:current = l:self.root
-        for l:ch in split(a:str, '\zs')
-            if !has_key(l:current.children, l:ch)
-                return {}
-            endif
-            let l:current = get(l:current.children, l:ch)
-        endfor
-        return l:current
-    endfunction
-
     return l:obj
 endfunction
 
@@ -190,7 +170,7 @@ function! pear_tree#trie#Traverser(trie) abort
     endfunction
 
     function! l:obj.PrintChildren() abort
-        return join(keys(l:self.current.children),', ')
+        return join(keys(l:self.current.children), ', ')
     endfunction
 
     return l:obj
