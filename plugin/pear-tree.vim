@@ -79,9 +79,8 @@ endif
 augroup pear-tree
     autocmd!
     autocmd BufEnter * call <SID>Init()
-    autocmd CursorMovedI * call pear_tree#insert_mode#CursorMoved()
+    autocmd CursorMovedI,InsertEnter * call pear_tree#insert_mode#CursorMoved()
     autocmd InsertCharPre * call pear_tree#insert_mode#HandleKeypress()
-    autocmd InsertEnter * call pear_tree#insert_mode#Enter()
 augroup END
 
 

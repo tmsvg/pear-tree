@@ -5,14 +5,8 @@ endfunction
 
 function! pear_tree#insert_mode#Prepare(trie) abort
     let s:traverser = pear_tree#trie#Traverser(a:trie)
-endfunction
-
-
-function! pear_tree#insert_mode#Enter() abort
     let s:current_line = line('.')
     let s:current_column = col('.')
-    call s:traverser.Reset()
-    call s:traverser.TraverseText(getline('.'), 1, s:current_column - 1)
 endfunction
 
 
