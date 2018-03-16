@@ -29,5 +29,5 @@ endfunction
 
 
 function! pear_tree#cursor#SyntaxRegion() abort
-    return synIDattr(synIDtrans(synID(line('.'), col('.') + 1, 1)), 'name')
+    return synIDattr(synIDtrans(synID(line('.'), col('.'), 1)), 'name')
 endfunction

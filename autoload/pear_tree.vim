@@ -5,7 +5,8 @@ else
     let s:undo_joiner = ''
 endif
 
-function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
+
+function! pear_tree#GenerateDelimiter(opener, wildcard_part, user_typed) abort
     if !has_key(b:pear_tree_pairs, a:opener)
         return ''
     endif
@@ -15,7 +16,7 @@ function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
                 \ && index(get(l:delim_dict, 'not_if'), a:wildcard_part) > -1
         return ''
     " Handle the `not_in` rule.
-    elseif has_key(l:delim_dict, 'not_in')
+    elseif a:user_typed && has_key(l:delim_dict, 'not_in')
                 \ && index(get(l:delim_dict, 'not_in'), pear_tree#cursor#SyntaxRegion()) > -1
         return ''
     endif
@@ -76,7 +77,7 @@ function! pear_tree#HandleTrivialPair(char) abort
                 \ || (l:char_after_cursor =~# '\s' && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1))
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
                 \ || pear_tree#NextIsBracket()
-        let l:closer_string = pear_tree#GenerateDelimiter(a:char, '')
+        let l:closer_string = pear_tree#GenerateDelimiter(a:char, '', 1)
         return a:char . l:closer_string . repeat(s:undo_joiner . "\<Left>", pear_tree#util#VisualStringLength(l:closer_string))
     else
         return a:char
@@ -112,17 +113,14 @@ function! pear_tree#TerminateOpener(char) abort
         endif
     " Ignore if string ends in wildcard character.
     elseif (l:traverser.AtEndOfString() && l:traverser.AtWildcard())
-                \ || (!pear_tree#cursor#AtEndOfLine() && pear_tree#cursor#CharAfter() !~# '\s' && pear_tree#AccurateGetDelimiterAfterCursor() ==# '')
+                \ || (!pear_tree#cursor#AtEndOfLine() && pear_tree#cursor#CharAfter() !~# '\s' && pear_tree#GetDelimiterAfterCursor() ==# '')
         return a:char
     " Check if stepping to the pressed key in the trie brings us to
     " the end of the string. If so, insert the corresponding closer pair.
     elseif l:traverser.StepToChild(a:char)
         if l:traverser.AtEndOfString()
-            let l:opener = l:traverser.GetString()
-            let l:closer_string = pear_tree#GenerateDelimiter(l:opener, l:traverser.GetWildcardString())
-            let l:closer_str_len = pear_tree#util#VisualStringLength(l:closer_string)
-            let l:closer_string = a:char . l:closer_string . repeat(s:undo_joiner . "\<Left>", l:closer_str_len)
-            return l:closer_string
+            let l:closer_string = pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString(), 1)
+            return a:char . l:closer_string . repeat(s:undo_joiner . "\<Left>", pear_tree#util#VisualStringLength(l:closer_string))
         else
             return a:char
         endif
@@ -157,7 +155,7 @@ endfunction
 
 
 function! pear_tree#PrepareExpansion() abort
-    if pear_tree#AccurateGetDelimiterAfterCursor() !=# ''
+    if pear_tree#GetDelimiterAfterCursor() !=# ''
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         if strlen(l:text_after_cursor) > 0
             call add(s:strings_to_expand, l:text_after_cursor)
@@ -173,32 +171,33 @@ endfunction
 
 function! pear_tree#PairsInText(text, start, end) abort
     let l:traverser = pear_tree#insert_mode#GetTraverser()
-    let l:openers = {}
+    let l:backtrack = [a:start]
     let l:pairs = {}
-    let l:backtrack = a:start
-
-    while l:backtrack != -1
+    while l:backtrack != []
         call l:traverser.Reset()
-        let l:start = l:backtrack
-
-        let l:backtrack = -1
-
+        let l:start = remove(l:backtrack, -1)
         let l:i = l:start
-
         for l:char_at_i in split(a:text[(l:start - 1):(a:end - 1)], '\zs')
             if l:traverser.StepToChild(l:char_at_i)
                 " Mark position as potential opener to go back to.
-                if l:backtrack == -1
+                if l:start == a:start
                             \ && l:traverser.GetParent() != l:traverser.GetRoot()
                             \ && l:traverser.HasChild(l:traverser.GetRoot(), l:char_at_i)
-                    let l:backtrack = l:i
+                    call add(l:backtrack, l:i)
                 endif
                 if l:traverser.AtEndOfString()
-                    let l:opener = l:traverser.GetString()
-                    if !has_key(l:openers, l:opener)
-                        let l:openers[l:opener] = []
+                    let l:wc_str = l:traverser.GetWildcardString()
+                    let l:opener = substitute(l:traverser.GetString(), '*', l:wc_str, 'g')
+                    let l:closer = pear_tree#GenerateDelimiter(l:traverser.GetString(), l:wc_str, 0)
+                    if l:closer !=# ''
+                        if !has_key(l:pairs, l:closer)
+                            let l:pairs[l:closer] = []
+                        endif
+                        call add(l:pairs[l:closer], l:opener)
                     endif
-                    call add(l:openers[l:opener], [pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString()), l:i])
+                    if l:start != a:start
+                        break
+                    endif
                     call l:traverser.Reset()
                 endif
             else
@@ -207,35 +206,49 @@ function! pear_tree#PairsInText(text, start, end) abort
             let l:i = l:i + 1
         endfor
     endwhile
-    for l:key in keys(l:openers)
-        let l:index = 0
-        for [l:closer, l:i] in reverse(l:openers[l:key])
-            if l:closer ==# l:key
-                " 'Dumb' pair
-                let l:index = stridx(a:text, l:closer, l:i)
-            else
-                let l:index = stridx(a:text, l:closer, l:index + 1)
-            endif
-            if l:index != -1
-                let l:pairs[l:index] = l:closer
-            endif
-        endfor
-    endfor
     return l:pairs
 endfunction
 
 
-function! pear_tree#AccurateGetDelimiterAfterCursor() abort
-    let l:pairs = pear_tree#PairsInText(getline('.'), 1, col('.') - 1)
-    if has_key(l:pairs, col('.') - 1)
-        return l:pairs[col('.') - 1]
-    endif
+function! pear_tree#GetDelimiterAfterCursor() abort
+    let l:line = getline('.')
+    let l:end = col('.') - 1
+    let l:pairs = pear_tree#PairsInText(l:line, 1, l:end)
+
+    call filter(l:pairs, 'stridx(l:line, v:key, l:end) == l:end')
+    for l:closer in keys(l:pairs)
+        let l:stack = []
+        let l:i = l:end
+        while l:i >= 0
+            let l:decrement = 1
+            if stridx(l:line, l:closer, l:i) == l:i && !(l:stack != [] && pear_tree#IsDumbPair(l:closer))
+                call add(l:stack, l:closer)
+                let l:decrement = len(l:closer)
+            else
+                for l:opener in uniq(l:pairs[l:closer])
+                    if stridx(l:line, l:opener, l:i) == l:i
+                        if l:stack == []
+                            return ''
+                        else
+                            call remove(l:stack, -1)
+                            if l:stack == []
+                                return l:closer
+                            endif
+                            let l:decrement = len(l:opener)
+                        endif
+                        break
+                    endif
+                endfor
+            endif
+            let l:i = l:i - max([l:decrement - 1, 1])
+        endwhile
+    endfor
     return ''
 endfunction
 
 
 function! pear_tree#JumpOut() abort
-    let l:closer_string = pear_tree#AccurateGetDelimiterAfterCursor()
+    let l:closer_string = pear_tree#GetDelimiterAfterCursor()
     return repeat(s:undo_joiner . "\<Right>", pear_tree#util#VisualStringLength(l:closer_string))
 endfunction
 

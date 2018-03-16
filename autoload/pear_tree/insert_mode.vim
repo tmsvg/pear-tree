@@ -25,7 +25,9 @@ function! pear_tree#insert_mode#CursorMoved() abort
     elseif l:new_col < s:current_column
         while s:current_column > l:new_col
             if s:traverser.AtRoot()
-                call s:traverser.StepOrReset(pear_tree#cursor#CharBefore())
+                call s:traverser.TraverseText(getline('.'), 1, l:new_col - 1)
+                let s:current_column = l:new_col
+                break
             else
                 call s:traverser.StepToParent()
             endif
