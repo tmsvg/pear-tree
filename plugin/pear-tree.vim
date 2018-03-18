@@ -37,7 +37,7 @@ function! s:Init()
         let l:delimiter = get(l:delimiter, 'delimiter')
         call l:trie.Insert(l:opener)
 
-        let l:opener = strcharpart(l:opener, strlen(l:opener) - 1)
+        let l:opener = l:opener[strlen(l:opener) - 1]
         let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
 
         execute 'inoremap <silent> <expr> <buffer> ' . l:opener . " pear_tree#TerminateOpener('". l:escaped_opener . "')"

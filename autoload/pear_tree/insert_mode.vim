@@ -19,25 +19,13 @@ endfunction
 function! pear_tree#insert_mode#CursorMoved() abort
     let l:new_line = line('.')
     let l:new_col = col('.')
-    if l:new_line != s:current_line
+    if l:new_line != s:current_line || l:new_col < s:current_column
         call s:traverser.Reset()
-        call s:traverser.TraverseText(getline('.'), 1, l:new_col - 1)
-    elseif l:new_col < s:current_column
-        while s:current_column > l:new_col
-            if s:traverser.AtRoot()
-                call s:traverser.TraverseText(getline('.'), 1, l:new_col - 1)
-                let s:current_column = l:new_col
-                break
-            else
-                call s:traverser.StepToParent()
-            endif
-            let s:current_column = s:current_column - 1
-        endwhile
+        call s:traverser.TraverseText(getline('.'), 0, l:new_col - 1)
+        let s:current_column = l:new_col
     elseif l:new_col > s:current_column
-        while s:current_column < l:new_col
-            call s:traverser.StepOrReset(pear_tree#cursor#CharBefore())
-            let s:current_column = s:current_column + 1
-        endwhile
+        call s:traverser.TraverseText(getline('.'), s:current_column, l:new_col - 1)
+        let s:current_column = l:new_col
     endif
     let s:current_line = l:new_line
 endfunction

@@ -32,11 +32,10 @@ function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
 endfunction
 
 
-function! pear_tree#NextIsBracket() abort
-    let l:string_after_cursor = pear_tree#cursor#StringAfter()
+function! pear_tree#IsClosingBracket(char) abort
     for l:i in values(b:pear_tree_pairs)
         let l:i = get(l:i, 'delimiter')
-        if strcharpart(l:string_after_cursor, 0, max([strlen(l:i), 1])) ==# l:i
+        if a:char ==# l:i
             return !has_key(b:pear_tree_pairs, l:i)
         endif
     endfor
@@ -69,10 +68,10 @@ function! pear_tree#HandleSimplePair(char) abort
     "   5. Before a bracket-type character
     " then we may match the entered character.
     elseif pear_tree#cursor#OnEmptyLine()
-                \ || (pear_tree#cursor#AtEndOfLine() && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1))
-                \ || (l:char_after_cursor =~# '\s' && !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1))
+                \ || !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1) && (pear_tree#cursor#AtEndOfLine()
+                                                                                             \ || l:char_after_cursor =~# '\s')
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
-                \ || pear_tree#NextIsBracket()
+                \ || pear_tree#IsClosingBracket(l:char_after_cursor)
         let l:closer_string = pear_tree#GenerateDelimiter(a:char, '')
         return l:closer_string . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:closer_string))
     else
@@ -138,7 +137,7 @@ endfunction
 
 
 function! pear_tree#ExpandOne() abort
-    if len(s:strings_to_expand) == 0
+    if s:strings_to_expand == []
         return ''
     endif
     return remove(s:strings_to_expand, -1)
@@ -146,16 +145,15 @@ endfunction
 
 
 function! pear_tree#Expand() abort
-    if len(s:strings_to_expand) == 0
+    if s:strings_to_expand == []
         let l:ret_str = "\<Esc>"
     else
         let l:expanded_strings = join(reverse(s:strings_to_expand), "\<CR>")
         let l:ret_str = repeat(s:RIGHT, col('$') - col('.')) . "\<CR>" . l:expanded_strings . "\<Esc>"
         " Add movement back to correct position
         let l:ret_str = l:ret_str . line('.') . 'gg' . col('.') . '|lh'
+        let s:strings_to_expand = []
     endif
-    let s:strings_to_expand = []
-
     return l:ret_str
 endfunction
 
@@ -163,7 +161,7 @@ endfunction
 function! pear_tree#PrepareExpansion() abort
     if pear_tree#GetDelimiterAfterCursor() !=# ''
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
-        if strlen(l:text_after_cursor) > 0
+        if l:text_after_cursor !=# ''
             call add(s:strings_to_expand, l:text_after_cursor)
             return repeat("\<Del>", pear_tree#util#VisualStringLength(l:text_after_cursor)) . "\<CR>"
         else
@@ -229,7 +227,7 @@ function! pear_tree#GetDelimiterAfterCursor() abort
             let l:decrement = 1
             if stridx(l:line, l:closer, l:i) == l:i && !(l:stack != [] && pear_tree#IsDumbPair(l:closer))
                 call add(l:stack, l:closer)
-                let l:decrement = len(l:closer)
+                let l:decrement = strlen(l:closer)
             else
                 for l:opener in uniq(l:pairs[l:closer])
                     if stridx(l:line, l:opener, l:i) == l:i
@@ -240,7 +238,7 @@ function! pear_tree#GetDelimiterAfterCursor() abort
                             if l:stack == []
                                 return l:closer
                             endif
-                            let l:decrement = len(l:opener)
+                            let l:decrement = strlen(l:opener)
                         endif
                         break
                     endif

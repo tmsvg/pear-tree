@@ -26,7 +26,7 @@ function! pear_tree#trie#Node(char) abort
              \ 'parent': {},
              \ 'is_end_of_string': 0}
 
-    function! l:obj.get_child(char) abort
+    function! l:obj.GetChild(char) abort
         if has_key(l:self.children, a:char)
             return get(l:self.children, a:char)
         else
@@ -46,8 +46,8 @@ function! pear_tree#trie#Traverser(trie) abort
              \ 'wildcard_string': ''}
 
     function! l:obj.StepToChild(char) abort
-        let l:node = l:self.current.get_child(a:char)
-        let l:wildcard_node = l:self.current.get_child('*')
+        let l:node = l:self.current.GetChild(a:char)
+        let l:wildcard_node = l:self.current.GetChild('*')
         " We can step to the node with a:char
         if l:node != {}
             let l:self.current = l:node
@@ -88,13 +88,33 @@ function! pear_tree#trie#Traverser(trie) abort
 
     " Input text into the trie traverser.
     function! l:obj.TraverseText(text, start, end) abort
-        for l:char_at_i in split(a:text[(a:start - 1):(a:end - 1)], '\zs')
-            call l:self.StepOrReset(l:char_at_i)
-        endfor
+        let l:i = a:start
+        while l:i < a:end
+            let l:indices = []
+            if l:self.HasChild(l:self.current, '*')
+                call add(l:indices, l:i)
+            else
+                for l:child in keys(l:self.current.children)
+                    let l:tmp = stridx(a:text, l:child, l:i)
+                    if l:tmp != -1
+                        call add(l:indices, l:tmp)
+                    endif
+                endfor
+            endif
+            if l:self.AtWildcard()
+                let l:end_of_wc = (l:indices == [] ? (a:end - 1) : (min(l:indices) - 1))
+                let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i):(l:end_of_wc)]
+                let l:i = l:end_of_wc + 1
+            else
+                let l:i = (l:indices == [] ? (l:i) : min(l:indices))
+            endif
+            call l:self.StepOrReset(a:text[(l:i)])
+            let l:i = l:i + 1
+        endwhile
     endfunction
 
     function! l:obj.StepToParent() abort
-        if l:self.AtWildcard() && strlen(l:self.wildcard_string) != 0
+        if l:self.AtWildcard() && l:self.wildcard_string !=# ''
             let l:self.wildcard_string = l:self.wildcard_string[:-2]
         elseif l:self.current.parent != {}
             let l:self.current = l:self.current.parent
