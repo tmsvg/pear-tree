@@ -159,14 +159,11 @@ endfunction
 
 
 function! pear_tree#PrepareExpansion() abort
-    if pear_tree#GetDelimiterAfterCursor() !=# ''
+    let l:delim = pear_tree#GetDelimiterAfterCursor()
+    if l:delim !=# '' && !pear_tree#IsDumbPair(l:delim)
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
-        if l:text_after_cursor !=# ''
-            call add(s:strings_to_expand, l:text_after_cursor)
-            return repeat("\<Del>", pear_tree#util#VisualStringLength(l:text_after_cursor)) . "\<CR>"
-        else
-            return "\<CR>"
-        endif
+        call add(s:strings_to_expand, l:text_after_cursor)
+        return repeat("\<Del>", pear_tree#util#VisualStringLength(l:text_after_cursor)) . "\<CR>"
     else
         return "\<CR>"
     endif
