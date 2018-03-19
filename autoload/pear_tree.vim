@@ -178,14 +178,39 @@ function! pear_tree#PairsInText(text, start, end) abort
         call l:traverser.Reset()
         let l:start = remove(l:backtrack, -1)
         let l:i = l:start
-        for l:char_at_i in split(a:text[(l:start - 1):(a:end - 1)], '\zs')
-            if l:traverser.StepToChild(l:char_at_i)
-                " Mark position as potential opener to go back to.
+        while l:i < a:end
+            let l:indices = []
+            if l:traverser.HasChild(l:traverser.GetCurrent(), '*')
+                call add(l:indices, l:i)
+            else
+                for l:child in keys(l:traverser.GetCurrent().GetChildren())
+                    let l:next = stridx(a:text, l:child, l:i)
+                    if l:next != -1
+                        call add(l:indices, l:next)
+                    endif
+                endfor
+            endif
+            if l:traverser.AtWildcard()
+                let l:end_of_wc = (l:indices == [] ? (a:end - 1) : (min(l:indices) - 1))
+                let l:traverser.wildcard_string = l:traverser.wildcard_string . a:text[(l:i):(l:end_of_wc)]
                 if l:start == a:start
-                            \ && l:traverser.GetParent() != l:traverser.GetRoot()
-                            \ && l:traverser.HasChild(l:traverser.GetRoot(), l:char_at_i)
-                    call add(l:backtrack, l:i)
+                    for l:child in keys(l:traverser.GetRoot().GetChildren())
+                        let l:next = stridx(a:text, l:child, l:i)
+                        if l:next != -1 && l:next < l:end_of_wc
+                            call add(l:backtrack, l:next)
+                        endif
+                    endfor
                 endif
+                let l:i = l:end_of_wc + 1
+            elseif l:traverser.AtRoot()
+                let l:i = (l:indices == [] ? (a:end) : min(l:indices))
+            else
+                if l:indices == [] || min(l:indices) > l:i
+                    call l:traverser.Reset()
+                    continue
+                endif
+            endif
+            if l:traverser.StepToChild(a:text[(l:i)])
                 if l:traverser.AtEndOfString()
                     let l:wc_str = l:traverser.GetWildcardString()
                     let l:opener = substitute(l:traverser.GetString(), '*', l:wc_str, 'g')
@@ -205,7 +230,7 @@ function! pear_tree#PairsInText(text, start, end) abort
                 call l:traverser.Reset()
             endif
             let l:i = l:i + 1
-        endfor
+        endwhile
     endwhile
     return l:pairs
 endfunction
@@ -214,7 +239,7 @@ endfunction
 function! pear_tree#GetDelimiterAfterCursor() abort
     let l:line = getline('.')
     let l:end = col('.') - 1
-    let l:pairs = pear_tree#PairsInText(l:line, 1, l:end)
+    let l:pairs = pear_tree#PairsInText(l:line, 0, l:end)
 
     call filter(l:pairs, 'stridx(l:line, v:key, l:end) == l:end')
     for l:closer in keys(l:pairs)

@@ -34,6 +34,10 @@ function! pear_tree#trie#Node(char) abort
         endif
     endfunction
 
+    function! l:obj.GetChildren() abort
+        return l:self.children
+    endfunction
+
     return l:obj
 endfunction
 
@@ -105,8 +109,13 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:end_of_wc = (l:indices == [] ? (a:end - 1) : (min(l:indices) - 1))
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
+            elseif l:self.AtRoot()
+                let l:i = (l:indices == [] ? (a:end) : min(l:indices))
             else
-                let l:i = (l:indices == [] ? (l:i) : min(l:indices))
+                if l:indices == [] || min(l:indices) > l:i
+                    call l:self.Reset()
+                    continue
+                endif
             endif
             call l:self.StepOrReset(a:text[(l:i)])
             let l:i = l:i + 1
@@ -187,10 +196,6 @@ function! pear_tree#trie#Traverser(trie) abort
 
     function! l:obj.HasChild(node, char) abort
         return has_key(a:node.children, a:char)
-    endfunction
-
-    function! l:obj.PrintChildren() abort
-        return join(keys(l:self.current.children), ', ')
     endfunction
 
     return l:obj
