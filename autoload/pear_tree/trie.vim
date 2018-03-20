@@ -38,6 +38,17 @@ function! pear_tree#trie#Node(char) abort
         return l:self.children
     endfunction
 
+    function! l:obj.FindChildrenInText(text, start, end)
+        let l:indices = []
+        for l:child in keys(l:self.children)
+            let l:idx = stridx(a:text[:(a:end)], l:child, a:start)
+            if l:idx != -1
+                call add(l:indices, l:idx)
+            endif
+        endfor
+        return l:indices
+    endfunction
+
     return l:obj
 endfunction
 
@@ -98,15 +109,10 @@ function! pear_tree#trie#Traverser(trie) abort
             if l:self.HasChild(l:self.current, '*')
                 call add(l:indices, l:i)
             else
-                for l:child in keys(l:self.current.children)
-                    let l:tmp = stridx(a:text, l:child, l:i)
-                    if l:tmp != -1
-                        call add(l:indices, l:tmp)
-                    endif
-                endfor
+                let l:indices = l:self.current.FindChildrenInText(a:text, l:i, a:end)
             endif
             if l:self.AtWildcard()
-                let l:end_of_wc = (l:indices == [] ? (a:end - 1) : (min(l:indices) - 1))
+                let l:end_of_wc = l:indices == [] ? (a:end - 1) : (min(l:indices) - 1)
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
