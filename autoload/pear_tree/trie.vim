@@ -38,17 +38,6 @@ function! pear_tree#trie#Node(char) abort
         return l:self.children
     endfunction
 
-    function! l:obj.FindChildrenInText(text, start, end)
-        let l:indices = []
-        for l:child in keys(l:self.children)
-            let l:idx = stridx(a:text[:(a:end)], l:child, a:start)
-            if l:idx != -1
-                call add(l:indices, l:idx)
-            endif
-        endfor
-        return l:indices
-    endfunction
-
     return l:obj
 endfunction
 
@@ -105,11 +94,15 @@ function! pear_tree#trie#Traverser(trie) abort
     function! l:obj.TraverseText(text, start, end) abort
         let l:i = a:start
         while l:i < a:end
-            let l:indices = []
             if l:self.HasChild(l:self.current, '*')
-                call add(l:indices, l:i)
+                let l:indices = [l:i]
+            elseif l:self.AtRoot()
+                " Ignore single-character strings that are in the trie since
+                " stepping to one would only reset the traverser.
+                let l:children = filter(keys(l:self.current.children), 'l:self.current.GetChild(v:val).children != {}')
+                let l:indices = pear_tree#util#FindAll(a:text, l:children, l:i)
             else
-                let l:indices = l:self.current.FindChildrenInText(a:text, l:i, a:end)
+                let l:indices = pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
             endif
             if l:self.AtWildcard()
                 let l:end_of_wc = l:indices == [] ? (a:end - 1) : (min(l:indices) - 1)

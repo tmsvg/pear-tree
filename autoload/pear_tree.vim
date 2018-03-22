@@ -147,26 +147,26 @@ endfunction
 function! pear_tree#PairsInText(text, start, end) abort
     let l:traverser = pear_tree#insert_mode#GetTraverser()
     let l:pairs = {}
-
-    let l:backtrack = [a:start]
+    let l:children = l:traverser.GetRoot().GetChildren()
+    " Find the first occurence of single-character openers and every potential
+    " starting point of a multicharacter opener.
+    let l:backtrack = pear_tree#util#FindAll(a:text[:(a:end)], filter(keys(l:children), 'l:traverser.GetRoot().GetChild(v:val).GetChildren() == {}'), a:start)
+    for l:child in filter(keys(l:children), 'l:traverser.GetRoot().GetChild(v:val).GetChildren() != {}')
+        let l:backtrack = l:backtrack + pear_tree#util#FindEvery(a:text[:(a:end)], l:child, a:start)
+    endfor
+    call add(l:backtrack, a:start)
     while l:backtrack != []
         call l:traverser.Reset()
-        let l:start = remove(l:backtrack, -1)
-        let l:i = l:start
+        let l:i = remove(l:backtrack, -1)
         while l:i < a:end
             if l:traverser.HasChild(l:traverser.GetCurrent(), '*')
                 let l:indices = [l:i]
             else
-                let l:indices = l:traverser.GetCurrent().FindChildrenInText(a:text, l:i, a:end)
+                let l:indices = pear_tree#util#FindAll(a:text, keys(l:traverser.GetCurrent().GetChildren()), l:i)
             endif
             if l:traverser.AtWildcard()
                 let l:end_of_wc = l:indices == [] ? (a:end - 1) : (min(l:indices) - 1)
                 let l:traverser.wildcard_string = l:traverser.wildcard_string . a:text[(l:i):(l:end_of_wc)]
-                " If not currently backtracking, gather indices of characters
-                " within the wildcard that may be the start of an opener.
-                if l:start == a:start
-                    let l:backtrack = l:traverser.GetRoot().FindChildrenInText(a:text, l:i, l:end_of_wc)
-                endif
                 let l:i = l:end_of_wc + 1
             elseif l:traverser.AtRoot()
                 let l:i = (l:indices == [] ? (a:end) : min(l:indices))
@@ -187,10 +187,7 @@ function! pear_tree#PairsInText(text, start, end) abort
                         endif
                         call add(l:pairs[l:delim], l:opener)
                     endif
-                    if l:start != a:start
-                        break
-                    endif
-                    call l:traverser.Reset()
+                    break
                 endif
             else
                 call l:traverser.Reset()
@@ -198,6 +195,9 @@ function! pear_tree#PairsInText(text, start, end) abort
             let l:i = l:i + 1
         endwhile
     endwhile
+    for l:delim in keys(l:pairs)
+        let l:pairs[l:delim] = uniq(l:pairs[l:delim])
+    endfor
     return l:pairs
 endfunction
 
@@ -216,7 +216,7 @@ function! pear_tree#GetDelimiterAfterCursor() abort
         let l:i = l:end
         while l:i >= 0
             let l:opener_indices = []
-            for l:opener in uniq(l:pairs[l:delim])
+            for l:opener in l:pairs[l:delim]
                 call add(l:opener_indices, strridx(l:line, l:opener, l:i))
             endfor
             let l:next_opener = max(l:opener_indices)
