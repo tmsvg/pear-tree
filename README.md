@@ -28,7 +28,7 @@ A powerful feature of Pear Tree is its support for wildcard string matching. Thi
 
 ### Dot-Repeatability
 
-Pear Tree is (to my knowledge) the only plugin of its kind that allows brace expansion while not breaking Vim's dot-repeat OR undo functionality. Consider this example:
+Pear Tree is (to my knowledge) the only plugin of its kind that allows brace expansion while not breaking Vim's dot-repeat *or* undo functionality. Consider this example:
 
 ```c
 1  int foo();|
@@ -54,7 +54,7 @@ Type `<CR>`:
 5  int bar();
 ```
 
-Note that the closing pair disappears after pressing `<CR>`. This is required to not break dot-repeat, but it will be reentered upon `<Plug>PearTreeFinishExpansion` (see [Mappings](#mappings)).
+Note that the closing pair disappears after pressing `<CR>`. This is required to not break dot-repeat, but it will be reentered upon `<Plug>(PearTreeFinishExpansion)` (see [Mappings](#mappings)).
 
 Next, type `return 1;` and leave insert mode:
 
@@ -132,18 +132,18 @@ A Pear Tree rule supports several options to more finely tune its matching behav
 
 ### Mappings
 
-- `<Plug>PearTreeBackspace`
+- `<Plug>(PearTreeBackspace)`
     - If cursor is between an opener and delimiter, delete both. Otherwise, act like typical backspace.
-    - Example: `return foo(|)` --> `return foo|`
+    - Example: `return foo(|)` -> `return foo|`
     - Default mapping: `<BS>`
 
-- `<Plug>PearTreeExpand`
+- `<Plug>(PearTreeExpand)`
     - If cursor is between an opener and delimiter, add a new line and prepare to add the delimiter on the line following the cursor's new position.
     - Example:
         ```c
         1  int foo() {|}
         ```
-        -->
+        ->
         ```c
         1  int foo() {
         2      |
@@ -151,7 +151,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
         ```
     - Default mapping: `<CR>`
 
-- `<Plug>PearTreeFinishExpansion`
+- `<Plug>(PearTreeFinishExpansion)`
     - If `<Plug>PearTreeExpand` has been used, add the delimiters to their proper positions.
     - Example (continued from above):
         ```c
@@ -159,7 +159,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
         2      |
         3
         ```
-        -->
+        ->
         ```c
         1  int foo() {
         2      |
@@ -167,20 +167,20 @@ A Pear Tree rule supports several options to more finely tune its matching behav
         ```
     - Default mapping: `<ESC>`
 
-- `<Plug>PearTreeJump`
+- `<Plug>(PearTreeJump)`
     - If the cursor is before a delimiter whose opener is earlier on the same line, move the cursor past the delimiter.
     - Example:
         ```html
         1  <p class="Foo">Hello, world!|</p>
         ```
-        -->
+        ->
         ```html
         1  <p class="Foo">Hello, world!</p>|
         ```
     - Default mapping: `<C-l>`
 
-- `<Plug>PearTreeOnceExpand`
-    - If `<Plug>PearTreeExpand` has been used multiple times, leading to nested pairs, add the innermost delimiter to its proper position.
+- `<Plug>(PearTreeExpandOne)`
+    - If `<Plug>(PearTreeExpand)` has been used multiple times, leading to nested pairs, add the innermost delimiter to its proper position.
     - Example:
         ```html
         1  <html>|</html>
@@ -199,7 +199,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
         4           |
         5
         ```
-        -->
+        ->
         ```html
         1  <html>
         2      <body>
@@ -210,13 +210,13 @@ A Pear Tree rule supports several options to more finely tune its matching behav
     - Default mapping: none
 
 
-- `<Plug>PearTreeJNR`
+- `<Plug>(PearTreeJNR)`
     - If the cursor is before a delimiter whose opener is earlier on the same line, move the cursor past the delimiter and insert a newline ("jump 'n return").
     - Example:
         ```html
         1  <p class="Foo">Hello, world!|</p>
         ```
-        -->
+        ->
         ```html
         1  <p class="Foo">Hello, world!</p>
         2  |
@@ -240,20 +240,20 @@ let g:pear_tree_pairs = {
 ```
 
 ```vim
-" Default mappings:
-imap <BS> <Plug>PearTreeBackspace
-imap <CR> <Plug>PearTreeExpand
-imap <ESC> <Plug>PearTreeFinishExpansion
-imap <C-l> <Plug>PearTreeJump
-
-" Not mapped by default:
-" <Plug>PearTreeOnceExpand
-" <Plug>PearTreeJNR
+" Pear Tree is enabled for all filetypes by default
+let g:pear_tree_ft_disabled = []
 ```
 
 ```vim
-" Pear Tree is enabled for all filetypes by default
-let g:pear_tree_ft_disabled = []
+" Default mappings:
+imap <BS> <Plug>(PearTreeBackspace)
+imap <CR> <Plug>(PearTreeExpand)
+imap <ESC> Plug>(PearTreeFinishExpansion)
+imap <C-l> <Plug>(PearTreeJump)
+
+" Not mapped by default:
+" <Plug>(PearTreeExpandOne)
+" <Plug>(PearTreeJNR)
 ```
 
 
