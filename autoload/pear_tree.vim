@@ -64,14 +64,14 @@ function! pear_tree#HandleSimplePair(char) abort
     "   1. On an empty line
     "   2. At end of line and not placing dumb pair directly after a word
     "   3. Followed by whitespace and not placing dumb pair directly after a word
-    "   4. Between opening and closing pair
-    "   5. Before a bracket-type character
+    "   4. Before a bracket-type character and not placing dumb pair directly after a word
+    "   5. Between opening and closing pair
     " then we may match the entered character.
     elseif pear_tree#cursor#OnEmptyLine()
                 \ || !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1) && (pear_tree#cursor#AtEndOfLine()
-                                                                                             \ || l:char_after_cursor =~# '\s')
+                                                                                             \ || l:char_after_cursor =~# '\s'
+                                                                                             \ || pear_tree#IsClosingBracket(l:char_after_cursor))
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
-                \ || pear_tree#IsClosingBracket(l:char_after_cursor)
         let l:delim = pear_tree#GenerateDelimiter(a:char, '')
         return l:delim . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:delim))
     else
