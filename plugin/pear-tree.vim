@@ -30,13 +30,12 @@ function! s:BufferInit()
 
     call s:MapPairs(l:trie)
     call s:MapDefaults()
-    call s:PrepareAutoCommands()
     call pear_tree#insert_mode#Prepare(l:trie)
+    let b:pear_tree_enabled = 1
 endfunction
 
 
 function! s:MapPairs(trie)
-    let s:mappings = []
     for [l:opener, l:delimiter] in items(b:pear_tree_pairs)
         let l:delimiter = get(l:delimiter, 'delimiter')
         call a:trie.Insert(l:opener)
@@ -49,36 +48,8 @@ function! s:MapPairs(trie)
         if strlen(l:delimiter) == 1 && !has_key(g:pear_tree_pairs, l:delimiter)
             let l:escaped_delimiter = substitute(l:delimiter, "'", "''", 'g')
             execute 'inoremap <silent> <expr> <buffer> ' . l:delimiter . ' pear_tree#OnPressDelimiter(''' . l:escaped_delimiter . ''')'
-            call add(s:mappings, l:delimiter)
-        endif
-        call add(s:mappings, l:opener)
-    endfor
-    let b:pear_tree_enabled = 1
-endfunction
-
-
-function! s:BufferDisable()
-    for l:mapping in s:mappings
-        if maparg(l:mapping, 'i') =~# '^pear_tree#'
-            execute 'silent! iunmap <buffer> ' . l:mapping
         endif
     endfor
-
-    unlet s:mappings
-
-    augroup pear_tree
-        autocmd!
-    augroup END
-    let b:pear_tree_enabled = 0
-endfunction
-
-
-function! s:PrepareAutoCommands()
-    augroup pear_tree
-        autocmd!
-        autocmd CursorMovedI,InsertEnter * call pear_tree#insert_mode#CursorMoved()
-        autocmd InsertCharPre * call pear_tree#insert_mode#HandleKeypress()
-    augroup END
 endfunction
 
 
@@ -101,6 +72,23 @@ function! s:MapDefaults()
 endfunction
 
 
+function! s:BufferDisable()
+    if b:pear_tree_enabled
+        " Unmap keys
+        for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
+            if l:map =~# '^<Plug>(PearTree'
+                continue
+            endif
+            let l:map_arg = maparg(l:map, 'i')
+            if l:map_arg =~# '^pear_tree#' || l:map_arg =~# '^<Plug>(PearTree'
+                execute 'silent! iunmap <buffer> ' . l:map
+            endif
+        endfor
+        let b:pear_tree_enabled = 0
+    endif
+endfunction
+
+
 inoremap <silent> <expr> <Plug>(PearTreeBackspace) pear_tree#Backspace()
 inoremap <silent> <expr> <Plug>(PearTreeJump) pear_tree#JumpOut()
 inoremap <silent> <expr> <Plug>(PearTreeJNR) pear_tree#JumpNReturn()
@@ -111,9 +99,11 @@ inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#Expand()
 command -bar PearTreeEnable call s:BufferInit()
 command -bar PearTreeDisable call s:BufferDisable()
 
-augroup pear_tree_init
+augroup pear_tree
     autocmd!
     autocmd FileType * if index(g:pear_tree_ft_disabled, &filetype) == -1 | call <SID>BufferInit() | endif
+    autocmd CursorMovedI,InsertEnter * if b:pear_tree_enabled | call pear_tree#insert_mode#CursorMoved() | endif
+    autocmd InsertCharPre * if b:pear_tree_enabled | call pear_tree#insert_mode#HandleKeypress() | endif
 augroup END
 
 let &cpoptions = s:save_cpo
