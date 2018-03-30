@@ -27,11 +27,7 @@ function! pear_tree#trie#Node(char) abort
              \ 'is_end_of_string': 0}
 
     function! l:obj.GetChild(char) abort
-        if has_key(l:self.children, a:char)
-            return get(l:self.children, a:char)
-        else
-            return {}
-        endif
+        return get(l:self.children, a:char, {})
     endfunction
 
     function! l:obj.GetChildren() abort
@@ -135,7 +131,7 @@ function! pear_tree#trie#Traverser(trie) abort
         while !has_key(l:node.children, a:char)
             let l:node = l:node.parent
             if l:node == {}
-                return l:node
+                return {}
             endif
         endwhile
         return get(l:node.children, a:char)

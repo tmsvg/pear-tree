@@ -14,11 +14,7 @@ function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
     endif
     let l:delim_dict = get(b:pear_tree_pairs, a:opener)
     " Handle the `until` rule.
-    if has_key(l:delim_dict, 'until')
-        let l:match_char = get(l:delim_dict, 'until')
-    else
-        let l:match_char = '[[:punct:][:space:]]'
-    endif
+    let l:match_char = get(l:delim_dict, 'until', '[[:punct:][:space:]]')
     let l:delim = pear_tree#GetDelimiter(a:opener)
     if a:wildcard_part !=# ''
         let l:index = match(a:wildcard_part, l:match_char)
@@ -57,7 +53,7 @@ function! pear_tree#HandleSimplePair(char) abort
     let l:delim_dict = get(b:pear_tree_pairs, a:char)
     let l:char_after_cursor = pear_tree#cursor#CharAfter()
     let l:char_before_cursor = pear_tree#cursor#CharBefore()
-    if has_key(l:delim_dict, 'not_in') && index(get(l:delim_dict, 'not_in'), pear_tree#cursor#SyntaxRegion()) > -1
+    if index(get(l:delim_dict, 'not_in', []), pear_tree#cursor#SyntaxRegion()) > -1
         return ''
     " Define situations in which Pear Tree is permitted to match.
     " If the cursor is:
@@ -68,9 +64,9 @@ function! pear_tree#HandleSimplePair(char) abort
     "   5. Between opening and closing pair
     " then we may match the entered character.
     elseif pear_tree#cursor#OnEmptyLine()
-                \ || !(pear_tree#IsDumbPair(a:char) && match(l:char_before_cursor, '\w') > -1) && (pear_tree#cursor#AtEndOfLine()
-                                                                                             \ || l:char_after_cursor =~# '\s'
-                                                                                             \ || pear_tree#IsClosingBracket(l:char_after_cursor))
+                \ || !(pear_tree#IsDumbPair(a:char) && l:char_before_cursor =~# '\w') && (pear_tree#cursor#AtEndOfLine()
+                                                                                            \ || l:char_after_cursor =~# '\s'
+                                                                                            \ || pear_tree#IsClosingBracket(l:char_after_cursor))
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
         let l:delim = pear_tree#GenerateDelimiter(a:char, '')
         return l:delim . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:delim))
@@ -83,8 +79,8 @@ endfunction
 function! pear_tree#HandleComplexPair(opener, wildcard_part) abort
     let l:delim_dict = get(b:pear_tree_pairs, a:opener)
     " Handle rules
-    if (has_key(l:delim_dict, 'not_if') && index(get(l:delim_dict, 'not_if'), a:wildcard_part) > -1)
-                \ || (has_key(l:delim_dict, 'not_in') && index(get(l:delim_dict, 'not_in'), pear_tree#cursor#SyntaxRegion()) > -1)
+    if index(get(l:delim_dict, 'not_if', []), a:wildcard_part) > -1
+                \ || index(get(l:delim_dict, 'not_in', []), pear_tree#cursor#SyntaxRegion()) > -1
         return ''
     elseif (pear_tree#cursor#AtEndOfLine()
                 \ || pear_tree#cursor#CharAfter() =~# '\s'
@@ -259,7 +255,7 @@ function! pear_tree#Backspace() abort
     let l:char_after_cursor = pear_tree#cursor#CharAfter()
     let l:char_before_cursor = pear_tree#cursor#CharBefore()
     if has_key(b:pear_tree_pairs, l:char_before_cursor)
-                \ && l:char_after_cursor ==# get(b:pear_tree_pairs, l:char_before_cursor)['delimiter']
+                \ && l:char_after_cursor ==# pear_tree#GetDelimiter(l:char_before_cursor)
         return "\<Del>\<BS>"
     endif
     return "\<BS>"

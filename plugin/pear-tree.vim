@@ -29,7 +29,13 @@ function! s:BufferInit()
     let l:trie = pear_tree#trie#New()
 
     call s:MapPairs(l:trie)
-    call s:MapDefaults()
+    if exists('s:mappings')
+        for l:map in keys(s:mappings)
+            execute 'imap <buffer> ' . l:map . ' ' . s:mappings[l:map]
+        endfor
+    else
+        call s:MapDefaults()
+    endif
     call pear_tree#insert_mode#Prepare(l:trie)
     let b:pear_tree_enabled = 1
 endfunction
@@ -73,19 +79,24 @@ endfunction
 
 
 function! s:BufferDisable()
-    if b:pear_tree_enabled
-        " Unmap keys
-        for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
-            if l:map =~# '^<Plug>(PearTree'
-                continue
-            endif
-            let l:map_arg = maparg(l:map, 'i')
-            if l:map_arg =~# '^pear_tree#' || l:map_arg =~# '^<Plug>(PearTree'
-                execute 'silent! iunmap <buffer> ' . l:map
-            endif
-        endfor
-        let b:pear_tree_enabled = 0
+    if !b:pear_tree_enabled
+        return
     endif
+    let s:mappings = {}
+    " Unmap keys
+    for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
+        if l:map =~# '^<Plug>(PearTree'
+            continue
+        endif
+        let l:map_arg = maparg(l:map, 'i')
+        if l:map_arg =~# '^pear_tree#'
+            execute 'silent! iunmap <buffer> ' . l:map
+        elseif l:map_arg =~# '^<Plug>(PearTree'
+            let s:mappings[l:map] = l:map_arg
+            execute 'silent! iunmap <buffer> ' . l:map
+        endif
+    endfor
+    let b:pear_tree_enabled = 0
 endfunction
 
 
