@@ -21,14 +21,17 @@ if !exists('g:pear_tree_ft_disabled')
 endif
 
 
-function! s:BufferInit()
+function! s:BufferEnable()
+    if exists('b:pear_tree_enabled') && b:pear_tree_enabled
+        return
+    endif
     if !exists('b:pear_tree_pairs')
         let b:pear_tree_pairs = g:pear_tree_pairs
     endif
 
     let l:trie = pear_tree#trie#New()
-
     call s:MapPairs(l:trie)
+
     if exists('s:mappings')
         for l:map in keys(s:mappings)
             execute 'imap <buffer> ' . l:map . ' ' . s:mappings[l:map]
@@ -36,7 +39,9 @@ function! s:BufferInit()
     else
         call s:MapDefaults()
     endif
+
     call pear_tree#insert_mode#Prepare(l:trie)
+
     let b:pear_tree_enabled = 1
 endfunction
 
@@ -79,7 +84,7 @@ endfunction
 
 
 function! s:BufferDisable()
-    if !b:pear_tree_enabled
+    if !exists('b:pear_tree_enabled') || !b:pear_tree_enabled
         return
     endif
     let s:mappings = {}
@@ -107,14 +112,23 @@ inoremap <silent> <expr> <Plug>(PearTreeExpand) pear_tree#PrepareExpansion()
 inoremap <silent> <expr> <Plug>(PearTreeExpandOne) pear_tree#ExpandOne()
 inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#Expand()
 
-command -bar PearTreeEnable call s:BufferInit()
+command -bar PearTreeEnable call s:BufferEnable()
 command -bar PearTreeDisable call s:BufferDisable()
 
 augroup pear_tree
     autocmd!
-    autocmd FileType * if index(g:pear_tree_ft_disabled, &filetype) == -1 | call <SID>BufferInit() | endif
-    autocmd CursorMovedI,InsertEnter * if b:pear_tree_enabled | call pear_tree#insert_mode#CursorMoved() | endif
-    autocmd InsertCharPre * if b:pear_tree_enabled | call pear_tree#insert_mode#HandleKeypress() | endif
+    autocmd BufRead,BufNewFile *
+                \ if (index(g:pear_tree_ft_disabled, &filetype) == -1) |
+                \       call <SID>BufferEnable() |
+                \ endif
+    autocmd CursorMovedI,InsertEnter *
+                \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
+                \       call pear_tree#insert_mode#CursorMoved() |
+                \ endif
+    autocmd InsertCharPre *
+                \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
+                \       call pear_tree#insert_mode#HandleKeypress() |
+                \ endif
 augroup END
 
 let &cpoptions = s:save_cpo
