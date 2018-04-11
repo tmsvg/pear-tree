@@ -11,6 +11,5 @@ if !exists('b:pear_tree_pairs')
                 \                    'area', 'base', 'col', 'command', 'embed',
                 \                    'keygen', 'param', 'source', 'track', 'wbr'],
                 \        },
-                \ '<!--': {'delimiter': '-->'},
                 \ }
 endif
