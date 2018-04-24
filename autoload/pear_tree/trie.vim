@@ -16,6 +16,20 @@ function! pear_tree#trie#New() abort
         let l:current.is_end_of_string = 1
     endfunction
 
+    function! l:obj.GetStrings(node, string, strings) abort
+        let l:strings = a:strings
+        let l:string = a:string
+        if a:node.is_end_of_string
+            call add(l:strings, l:string)
+        endif
+        for l:ch in keys(a:node.children)
+            let l:string = l:string . l:ch
+            call l:self.GetStrings(a:node.children[l:ch], l:string, l:strings)
+            let l:string = ''
+        endfor
+        return l:strings
+    endfunction
+
     return l:obj
 endfunction
 
@@ -88,29 +102,39 @@ function! pear_tree#trie#Traverser(trie) abort
 
     " Input text into the trie traverser.
     function! l:obj.TraverseText(text, start, end) abort
-        let l:i = a:start
+        let l:idx_list = [a:end]
+        for l:str in l:self.trie.GetStrings(l:self.root, '', [])
+            if strlen(l:str) == 1
+                continue
+            endif
+            " Find the index of the first opening character of l:str that follows the most recent closing character of l:str.
+            let l:idx = stridx(a:text, l:str[0], strridx(a:text, l:str[strlen(l:str) - 1], a:end - 1))
+            if l:idx != -1
+                call add(l:idx_list, l:idx)
+            endif
+        endfor
+        let l:i = min(l:idx_list)
         while l:i < a:end
             if l:self.HasChild(l:self.current, '*')
-                let l:indices = [l:i]
-            elseif l:self.AtRoot()
+                call l:self.StepOrReset(a:text[(l:i)])
+            endif
+            if l:self.AtRoot()
                 " Ignore single-character strings that are in the trie since
-                " stepping to one would only reset the traverser.
-                let l:children = filter(keys(l:self.current.children), 'l:self.current.GetChild(v:val).children != {}')
-                let l:indices = pear_tree#util#FindAll(a:text, l:children, l:i)
+                " stepping to one would only immediately reset the traverser.
+                let l:indices = pear_tree#util#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
             else
                 let l:indices = pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
             endif
+            call add(l:indices, a:end)
             if l:self.AtWildcard()
-                let l:end_of_wc = l:indices == [] ? (a:end - 1) : (min(l:indices) - 1)
-                let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i):(l:end_of_wc)]
+                let l:end_of_wc = min(l:indices) - 1
+                let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
-                let l:i = (l:indices == [] ? (a:end) : min(l:indices))
-            else
-                if l:indices == [] || min(l:indices) > l:i
-                    call l:self.Reset()
-                    continue
-                endif
+                let l:i = min(l:indices)
+            elseif l:indices == [] || min(l:indices) > l:i
+                call l:self.Reset()
+                continue
             endif
             call l:self.StepOrReset(a:text[(l:i)])
             let l:i = l:i + 1
