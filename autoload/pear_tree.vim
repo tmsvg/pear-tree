@@ -144,8 +144,8 @@ function! pear_tree#PairsInText(text, start, end) abort
     let l:traverser = pear_tree#insert_mode#GetTraverser()
     let l:pairs = {}
     let l:children = l:traverser.GetRoot().GetChildren()
-    " Find the first occurence of single-character openers and every potential
-    " starting point of a multicharacter opener.
+    " Find the first occurrence of single-character openers and every potential
+    " starting point of a multi-character opener.
     let l:backtrack = pear_tree#util#FindAll(a:text[:(a:end)], filter(keys(l:children), 'l:traverser.GetRoot().GetChild(v:val).GetChildren() == {}'), a:start)
     for l:child in filter(keys(l:children), 'l:traverser.GetRoot().GetChild(v:val).GetChildren() != {}')
         let l:backtrack = l:backtrack + pear_tree#util#FindEvery(a:text[:(a:end)], l:child, a:start)
