@@ -84,7 +84,7 @@ function! pear_tree#HandleComplexPair(opener, wildcard_part) abort
         return ''
     elseif (pear_tree#cursor#AtEndOfLine()
                 \ || pear_tree#cursor#CharAfter() =~# '\s'
-                \ || pear_tree#GetDelimiterAfterCursor() !=# '')
+                \ || pear_tree#IsBalancedPair(a:opener, pear_tree#GenerateDelimiter(a:opener, a:wildcard_part), a:wildcard_part))
         let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard_part)
         return l:delim . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:delim))
     else
@@ -132,117 +132,97 @@ function! pear_tree#TerminateOpener(char) abort
 endfunction
 
 
-" Return a dictionary of pairs in {text} from {start} to {end}.
-"
-" The dictionary returned by this function is of the form
-"       {delimiter: [openers ...], ...}
-" since wildcards allow a single delimiter to be created by various openers,
-" but an opener can generate only a single delimiter.
-"
-" This function does not determine if the pairs in the text are balanced.
-function! pear_tree#PairsInText(text, start, end) abort
+function! pear_tree#GetSurroundingPair() abort
+    let l:line = getline('.')
+    let l:delim_trie = pear_tree#trie#New()
+    for l:delim in values(b:pear_tree_pairs)
+        call l:delim_trie.Insert(l:delim['delimiter'])
+    endfor
+    let l:delim_trie_traverser = pear_tree#trie#Traverser(l:delim_trie)
+    if l:delim_trie_traverser.WeakTraverse(l:line, col('.') - 1, col('$')) == -1
+        return {}
+    endif
+    for [l:opener, l:delim] in items(b:pear_tree_pairs)
+        if l:delim['delimiter'] == l:delim_trie_traverser.GetString()
+            return {'opener': l:opener,
+                  \ 'delimiter': l:delim['delimiter'],
+                  \ 'wildcard': l:delim_trie_traverser.GetWildcardString()}
+        endif
+    endfor
+    return {}
+endfunction
+
+
+" Return the index of the last occurrence of {opener} in {text}.
+function! pear_tree#ReverseOpenerIdx(text, opener, delim, wildcard, start) abort
+    if a:wildcard ==# ''
+        return strridx(a:text, a:opener, a:start)
+    endif
+    let l:opener_hint = substitute(a:opener[:stridx(a:opener, '*')], '*', a:wildcard, 'g')
     let l:traverser = pear_tree#insert_mode#GetTraverser()
-    let l:pairs = {}
-    let l:children = l:traverser.GetRoot().GetChildren()
-    " Find the first occurrence of single-character openers and every potential
-    " starting point of a multi-character opener.
-    let l:backtrack = pear_tree#util#FindAll(a:text[:(a:end)], filter(keys(l:children), 'l:traverser.GetRoot().GetChild(v:val).GetChildren() == {}'), a:start)
-    for l:child in filter(keys(l:children), 'l:traverser.GetRoot().GetChild(v:val).GetChildren() != {}')
-        let l:backtrack = l:backtrack + pear_tree#util#FindEvery(a:text[:(a:end)], l:child, a:start)
-    endfor
-    call add(l:backtrack, a:start)
-    while l:backtrack != []
+    let l:i = a:start
+    while l:i >= 0
         call l:traverser.Reset()
-        let l:i = remove(l:backtrack, -1)
-        while l:i < a:end
-            if l:traverser.HasChild(l:traverser.GetCurrent(), '*')
-                let l:indices = [l:i]
-            else
-                let l:indices = pear_tree#util#FindAll(a:text, keys(l:traverser.GetCurrent().GetChildren()), l:i)
-            endif
-            if l:traverser.AtWildcard()
-                let l:end_of_wc = l:indices == [] ? (a:end - 1) : (min(l:indices) - 1)
-                let l:traverser.wildcard_string = l:traverser.wildcard_string . a:text[(l:i):(l:end_of_wc)]
-                let l:i = l:end_of_wc + 1
-            elseif l:traverser.AtRoot()
-                let l:i = (l:indices == [] ? (a:end) : min(l:indices))
-            else
-                if l:indices == [] || min(l:indices) > l:i
-                    call l:traverser.Reset()
-                    continue
-                endif
-            endif
-            if l:traverser.StepToChild(a:text[(l:i)])
-                if l:traverser.AtEndOfString()
-                    let l:wc_str = l:traverser.GetWildcardString()
-                    let l:opener = substitute(l:traverser.GetString(), '*', l:wc_str, 'g')
-                    let l:delim = pear_tree#GenerateDelimiter(l:traverser.GetString(), l:wc_str)
-                    if l:delim !=# '' && stridx(a:text, l:delim, l:i) != -1
-                        if !has_key(l:pairs, l:delim)
-                            let l:pairs[l:delim] = []
-                        endif
-                        call add(l:pairs[l:delim], l:opener)
-                    endif
-                    break
-                endif
-            else
-                call l:traverser.Reset()
-            endif
-            let l:i = l:i + 1
-        endwhile
+        let l:next_opener = strridx(a:text, l:opener_hint, l:i)
+        if l:traverser.WeakTraverse(a:text, l:next_opener, strlen(a:text)) != -1
+                    \ && pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString()) ==# a:delim
+            return l:next_opener
+        endif
+        let l:i = l:next_opener - 1
     endwhile
-    for l:delim in keys(l:pairs)
-        let l:pairs[l:delim] = uniq(l:pairs[l:delim])
-    endfor
-    return l:pairs
+    return -1
 endfunction
 
 
 " Check if the text that directly follows the cursor is a delimiter of a
 " balanced pair. If it is, return the delimiter.
-function! pear_tree#GetDelimiterAfterCursor() abort
+function! pear_tree#IsBalancedPair(opener, delim, wildcard) abort
     let l:line = getline('.')
     let l:end = col('.') - 1
-    let l:pairs = pear_tree#PairsInText(l:line, 0, l:end)
 
-    call filter(l:pairs, 'stridx(l:line, v:key, l:end) == l:end')
+    let l:stack = []
 
-    for l:delim in keys(l:pairs)
-        let l:stack = []
-        let l:i = l:end
-        while l:i >= 0
-            let l:opener_indices = []
-            for l:opener in l:pairs[l:delim]
-                call add(l:opener_indices, strridx(l:line, l:opener, l:i))
-            endfor
-            let l:next_opener = max(l:opener_indices)
-            let l:next_delim = strridx(l:line, l:delim, l:i)
-
-            if l:next_delim != -1 && l:next_delim >= l:next_opener && !(l:stack != [] && pear_tree#IsDumbPair(l:delim))
-                call add(l:stack, l:delim)
-                let l:i = l:next_delim - 1
-            elseif l:next_opener != -1
-                if l:stack != []
-                    call remove(l:stack, -1)
-                    if l:stack == []
-                        return l:delim
-                    endif
-                    let l:i = l:next_opener - 1
-                else
-                    return ''
-                endif
-            else
-                return ''
+    let l:i = l:end
+    let l:next_delim = l:i + 1
+    let l:next_opener = l:i + 1
+    while l:i >= 0
+        if l:next_opener > l:i
+            let l:next_opener = pear_tree#ReverseOpenerIdx(l:line, a:opener, a:delim, a:wildcard, l:i)
+        endif
+        if l:next_delim > l:i
+            let l:next_delim = strridx(l:line, a:delim, l:i)
+        endif
+        if l:next_delim != -1
+                    \ && l:next_delim >= l:next_opener
+                    \ && !(l:stack != [] && pear_tree#IsDumbPair(a:delim))
+            call add(l:stack, 0)
+            let l:i = l:next_delim - 1
+        elseif l:next_opener != -1 && l:stack != []
+            call remove(l:stack, -1)
+            if l:stack == []
+                return 1
             endif
-        endwhile
-    endfor
-    return ''
+            let l:i = l:next_opener - 1
+        else
+            return 0
+        endif
+    endwhile
 endfunction
 
 
 function! pear_tree#JumpOut() abort
-    let l:delim = pear_tree#GetDelimiterAfterCursor()
-    return repeat(s:RIGHT, pear_tree#util#VisualStringLength(l:delim))
+    let l:pair = pear_tree#GetSurroundingPair()
+    if l:pair == {}
+        return ''
+    endif
+    let l:opener = l:pair['opener']
+    let l:wildcard = l:pair['wildcard']
+    let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard)
+    if pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard)
+        return repeat(s:RIGHT, pear_tree#util#VisualStringLength(l:delim))
+    else
+        return ''
+    endif
 endfunction
 
 
@@ -263,8 +243,14 @@ endfunction
 
 
 function! pear_tree#PrepareExpansion() abort
-    let l:delim = pear_tree#GetDelimiterAfterCursor()
-    if l:delim !=# '' && !pear_tree#IsDumbPair(l:delim)
+    let l:pair = pear_tree#GetSurroundingPair()
+    if l:pair == {}
+        return "\<CR>"
+    endif
+    let l:opener = l:pair['opener']
+    let l:wildcard = l:pair['wildcard']
+    let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard)
+    if pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard) && !pear_tree#IsDumbPair(l:pair['delimiter'])
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         call add(s:strings_to_expand, l:text_after_cursor)
         return repeat("\<Del>", pear_tree#util#VisualStringLength(l:text_after_cursor)) . "\<CR>"

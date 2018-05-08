@@ -23,17 +23,3 @@ function! pear_tree#util#FindAll(text, strings, start)
     endfor
     return l:indices
 endfunction
-
-" Return a list of indices in {text} at which {string} appears.
-function! pear_tree#util#FindEvery(text, string, start)
-    let l:indices = []
-    let l:i = a:start - 1
-    while l:i < len(a:text)
-        let l:i = stridx(a:text, a:string, l:i + 1)
-        if l:i == -1
-            break
-        endif
-        call add(l:indices, l:i)
-    endwhile
-    return l:indices
-endfunction
