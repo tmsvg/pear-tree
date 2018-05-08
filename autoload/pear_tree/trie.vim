@@ -1,7 +1,6 @@
 function! pear_tree#trie#New() abort
     let l:obj = {'root': pear_tree#trie#Node(''),
-               \ 'leaves': []
-               \ }
+               \ 'leaves': []}
 
     function! l:obj.Insert(str) abort
         let l:current = l:self.root
@@ -43,9 +42,9 @@ endfunction
 
 function! pear_tree#trie#Node(char) abort
     let l:obj = {'char': a:char,
-             \ 'children': {},
-             \ 'parent': {},
-             \ 'is_end_of_string': 0}
+               \ 'children': {},
+               \ 'parent': {},
+               \ 'is_end_of_string': 0}
 
     function! l:obj.GetChild(char) abort
         return get(l:self.children, a:char, {})
@@ -61,20 +60,20 @@ endfunction
 
 function! pear_tree#trie#Traverser(trie) abort
     let l:obj = {'trie': a:trie,
-             \ 'root': a:trie.root,
-             \ 'current': a:trie.root,
-             \ 'string': '',
-             \ 'wildcard_string': ''}
+               \ 'root': a:trie.root,
+               \ 'current': a:trie.root,
+               \ 'string': '',
+               \ 'wildcard_string': ''}
 
     function! l:obj.StepToChild(char) abort
         let l:node = l:self.current.GetChild(a:char)
         let l:wildcard_node = l:self.current.GetChild('*')
-        " We can step to the node with a:char
+        " Try stepping to the node containing a:char.
         if l:node != {}
             let l:self.current = l:node
             let l:self.string = l:self.string . a:char
             return 1
-        " Try stepping to wildcard node
+        " Try stepping to a wildcard node.
         elseif l:wildcard_node != {}
             let l:self.current = l:wildcard_node
             let l:self.string = l:self.string . '*'
@@ -83,7 +82,7 @@ function! pear_tree#trie#Traverser(trie) abort
         elseif l:self.AtWildcard()
             let l:self.wildcard_string = l:self.wildcard_string . a:char
             return 1
-        " Reached dead-end; go back
+        " Reached dead end. Attempt to go back to wildcard node.
         else
             let l:node = l:self.Backtrack('*')
             if l:node != {}
@@ -112,47 +111,36 @@ function! pear_tree#trie#Traverser(trie) abort
         " An occurrence of the final character of a string means that any
         " time the first character of the string occurs before it, the string
         " is either complete or does not occur. In either case, the traverser
-        " would reset.
+        " would have to reset.
         "
         " For each string in the trie, find the index of the string's opening
         " character that occurs after the most recent occurrence of the final
-        " character of the string. Pointless resets can be avoided by starting
-        " at the smallest of these indices.
-        let l:idx_list = [a:end]
+        " character of the string. Unnecessary resets can be avoided by
+        " starting at the smallest of these indices.
+        let l:min_idx = a:end
         for l:str in l:self.trie.GetStrings()
             if strlen(l:str) == 1
                 continue
             endif
             let l:idx = stridx(a:text, l:str[0], strridx(a:text, l:str[strlen(l:str) - 1], a:end - 1))
-            if l:idx != -1
-                call add(l:idx_list, l:idx)
+            if l:idx < l:min_idx && l:idx >= a:start
+                let l:min_idx = l:idx
             endif
         endfor
-        let l:i = min(l:idx_list)
+        let l:i = l:min_idx
         while l:i < a:end
-            if l:self.HasChild(l:self.current, '*')
-                call l:self.StepOrReset(a:text[(l:i)])
-            endif
-            if l:self.AtRoot()
-                " Ignore single-character strings that are in the trie since
-                " stepping to one would only immediately reset the traverser.
-                let l:indices = pear_tree#util#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
-            else
-                let l:indices = pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
-            endif
-            call add(l:indices, a:end)
+            call l:self.StepOrReset(a:text[(l:i)])
             if l:self.AtWildcard()
+                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
                 let l:end_of_wc = min(l:indices) - 1
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
+                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
                 let l:i = min(l:indices)
-            elseif l:indices == [] || min(l:indices) > l:i
-                call l:self.Reset()
-                continue
+            else
+                let l:i = l:i + 1
             endif
-            call l:self.StepOrReset(a:text[(l:i)])
-            let l:i = l:i + 1
         endwhile
     endfunction
 
@@ -163,15 +151,6 @@ function! pear_tree#trie#Traverser(trie) abort
     function! l:obj.WeakTraverse(text, start, end) abort
         let l:i = a:start
         while l:i < a:end
-            if l:self.HasChild(l:self.GetCurrent(), '*')
-                call l:self.StepToChild(a:text[(l:i)])
-            endif
-            if l:self.AtWildcard()
-                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
-                let l:end_of_wc = min(l:indices) - 1
-                let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
-                let l:i = l:end_of_wc + 1
-            endif
             if l:self.StepToChild(a:text[(l:i)])
                 if l:self.AtEndOfString()
                     return l:i
@@ -180,7 +159,14 @@ function! pear_tree#trie#Traverser(trie) abort
                 call l:self.Reset()
                 return -1
             endif
-            let l:i = l:i + 1
+            if l:self.AtWildcard()
+                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
+                let l:end_of_wc = min(l:indices) - 1
+                let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
+                let l:i = l:end_of_wc + 1
+            else
+                let l:i = l:i + 1
+            endif
         endwhile
     endfunction
 
