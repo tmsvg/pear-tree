@@ -174,8 +174,7 @@ function! pear_tree#ReverseOpenerIdx(text, opener, delim, wildcard, start) abort
 endfunction
 
 
-" Check if the text that directly follows the cursor is a delimiter of a
-" balanced pair. If it is, return the delimiter.
+" Return 1 if {opener} is balanced with {delim} and 0 otherwise.
 function! pear_tree#IsBalancedPair(opener, delim, wildcard) abort
     let l:line = getline('.')
     let l:end = col('.') - 1

@@ -1,5 +1,7 @@
 function! pear_tree#trie#New() abort
-    let l:obj = {'root': pear_tree#trie#Node('')}
+    let l:obj = {'root': pear_tree#trie#Node(''),
+               \ 'leaves': []
+               \ }
 
     function! l:obj.Insert(str) abort
         let l:current = l:self.root
@@ -13,21 +15,26 @@ function! pear_tree#trie#New() abort
             endif
             let l:current = l:node
         endfor
+        call add(l:self.leaves, l:current)
         let l:current.is_end_of_string = 1
     endfunction
 
-    function! l:obj.GetStrings(node, string, strings) abort
-        let l:strings = a:strings
-        let l:string = a:string
-        if a:node.is_end_of_string
-            call add(l:strings, l:string)
-        endif
-        for l:ch in keys(a:node.children)
-            let l:string = l:string . l:ch
-            call l:self.GetStrings(a:node.children[l:ch], l:string, l:strings)
-            let l:string = ''
+    function! l:obj.GetStrings() abort
+        let l:strings = []
+        for l:node in l:self.leaves
+            call add(l:strings, l:self.GetStringAtNode(l:node))
         endfor
         return l:strings
+    endfunction
+
+    function! l:obj.GetStringAtNode(node) abort
+        let l:string = []
+        let l:current = a:node
+        while l:current != l:self.root
+            let l:string = add(l:string, l:current.char)
+            let l:current = l:current.parent
+        endwhile
+        return join(reverse(l:string), '')
     endfunction
 
     return l:obj
@@ -81,7 +88,7 @@ function! pear_tree#trie#Traverser(trie) abort
             let l:node = l:self.Backtrack('*')
             if l:node != {}
                 let l:self.current = l:node
-                let l:new_string = l:self.GetStringAtNode()
+                let l:new_string = l:self.trie.GetStringAtNode(l:self.current)
                 let l:self.wildcard_string = l:self.string[(strlen(l:new_string) - 1):]
                 let l:self.string = l:new_string
                 return l:self.StepToChild(a:char)
@@ -102,13 +109,20 @@ function! pear_tree#trie#Traverser(trie) abort
 
     " Traverse the substring of {text} that begins at {start} and ends at {end}
     function! l:obj.Traverse(text, start, end) abort
+        " An occurrence of the final character of a string means that any
+        " time the first character of the string occurs before it, the string
+        " is either complete or does not occur. In either case, the traverser
+        " would reset.
+        "
+        " For each string in the trie, find the index of the string's opening
+        " character that occurs after the most recent occurrence of the final
+        " character of the string. Pointless resets can be avoided by starting
+        " at the smallest of these indices.
         let l:idx_list = [a:end]
-        for l:str in l:self.trie.GetStrings(l:self.root, '', [])
+        for l:str in l:self.trie.GetStrings()
             if strlen(l:str) == 1
                 continue
             endif
-            " Find the index of the first opening character of l:str that
-            " follows the most recent closing character of l:str.
             let l:idx = stridx(a:text, l:str[0], strridx(a:text, l:str[strlen(l:str) - 1], a:end - 1))
             if l:idx != -1
                 call add(l:idx_list, l:idx)
@@ -188,16 +202,6 @@ function! pear_tree#trie#Traverser(trie) abort
             endif
         endwhile
         return get(l:node.children, a:char)
-    endfunction
-
-    function! l:obj.GetStringAtNode() abort
-        let l:node = l:self.current
-        let l:str = []
-        while l:node != l:self.root
-            let l:str = add(l:str, l:node.char)
-            let l:node = l:node.parent
-        endwhile
-        return join(reverse(l:str), '')
     endfunction
 
     function! l:obj.Reset() abort
