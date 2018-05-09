@@ -84,7 +84,7 @@ function! pear_tree#HandleComplexPair(opener, wildcard_part) abort
         return ''
     elseif (pear_tree#cursor#AtEndOfLine()
                 \ || pear_tree#cursor#CharAfter() =~# '\s'
-                \ || pear_tree#IsBalancedPair(a:opener, pear_tree#GenerateDelimiter(a:opener, a:wildcard_part), a:wildcard_part))
+                \ || pear_tree#GetSurroundingPair() != {})
         let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard_part)
         return l:delim . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:delim))
     else
