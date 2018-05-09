@@ -195,7 +195,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
         ```html
         1  <html>
         2      <body>
-        3           <p>Type this and go to next line.</p>
+        3           <p>Type this and go to the next line.</p>
         4           |
         5
         ```
@@ -248,7 +248,7 @@ let g:pear_tree_ft_disabled = []
 " Default mappings:
 imap <BS> <Plug>(PearTreeBackspace)
 imap <CR> <Plug>(PearTreeExpand)
-imap <ESC> Plug>(PearTreeFinishExpansion)
+imap <ESC> <Plug>(PearTreeFinishExpansion)
 imap <C-l> <Plug>(PearTreeJump)
 
 " Not mapped by default:
