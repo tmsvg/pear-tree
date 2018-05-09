@@ -236,7 +236,7 @@ let g:pear_tree_pairs = {
             \ "'": {'delimiter': "'", 'not_in': ['String']},
             \ '"': {'delimiter': '"', 'not_in': ['String']}
             \ }
-" See pear-tree/after/ftplugin/ for filetype-specific matching rules
+" See pear-tree/ftplugin/ for filetype-specific matching rules
 ```
 
 ```vim

@@ -5,6 +5,7 @@ if !exists('b:pear_tree_pairs')
                 \ '{': {'delimiter': '}'},
                 \ "'": {'delimiter': "'", 'not_in': ['String']},
                 \ '"': {'delimiter': '"', 'not_in': ['String']},
+                \ '`': {'delimiter': '`', 'not_in': ['String']},
                 \ 'r"': {'delimiter': '"', 'not_in': ['String', 'Comment']},
                 \ 'R"': {'delimiter': '"', 'not_in': ['String', 'Comment']},
                 \ 'u"': {'delimiter': '"', 'not_in': ['String', 'Comment']},
