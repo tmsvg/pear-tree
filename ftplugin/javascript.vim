@@ -6,6 +6,6 @@ if !exists('b:pear_tree_pairs')
                 \ "'": {'delimiter': "'", 'not_in': ['String']},
                 \ '"': {'delimiter': '"', 'not_in': ['String']},
                 \ '`': {'delimiter': '`', 'not_in': ['String']},
-                \ '/**': {'delimiter': '*/', 'not_in': ['String']},
+                \ '/\*\*': {'delimiter': '\*/', 'not_in': ['String']},
                 \ }
 endif

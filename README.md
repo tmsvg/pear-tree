@@ -106,7 +106,7 @@ A wildcard in the delimiter is replaced by the string of characters to which the
 
 Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, and (using an option discussed later to limit characters inserted in the delimiter) `<p class="Foo">` yields `<p class="Foo"></p>`.
 
-Wildcard characters at the beginning or end of an opener are treated as literal asterisks because doing otherwise would lead to unclear, annoying behavior.
+To include a literal asterisk in a rule, you must escape it with a backslash like `\*`. Similarly, to include a literal backslash in a rule, you must escape it with another backslash like `\\`.
 
 #### Options
 

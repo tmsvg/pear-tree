@@ -1,10 +1,11 @@
 function! pear_tree#trie#New() abort
     let l:obj = {'root': pear_tree#trie#Node(''),
-               \ 'leaves': []}
+               \ 'leaves': [],
+               \ 'wildcard_symbol': 'wc'}
 
     function! l:obj.Insert(str) abort
         let l:current = l:self.root
-        for l:ch in split(a:str, '\zs')
+        for l:ch in pear_tree#string#Encode(a:str, '*', l:self.wildcard_symbol)
             if !has_key(l:current.children, l:ch)
                 let l:node = pear_tree#trie#Node(l:ch)
                 let l:current.children[l:ch] = l:node
@@ -67,7 +68,7 @@ function! pear_tree#trie#Traverser(trie) abort
 
     function! l:obj.StepToChild(char) abort
         let l:node = l:self.current.GetChild(a:char)
-        let l:wildcard_node = l:self.current.GetChild('*')
+        let l:wildcard_node = l:self.current.GetChild(l:self.trie.wildcard_symbol)
         " Try stepping to the node containing a:char.
         if l:node != {}
             let l:self.current = l:node
@@ -76,7 +77,7 @@ function! pear_tree#trie#Traverser(trie) abort
         " Try stepping to a wildcard node.
         elseif l:wildcard_node != {}
             let l:self.current = l:wildcard_node
-            let l:self.string = l:self.string . '*'
+            let l:self.string = l:self.string . l:self.trie.wildcard_symbol
             let l:self.wildcard_string = l:self.wildcard_string . a:char
             return 1
         elseif l:self.AtWildcard()
@@ -84,7 +85,7 @@ function! pear_tree#trie#Traverser(trie) abort
             return 1
         " Reached dead end. Attempt to go back to wildcard node.
         else
-            let l:node = l:self.Backtrack('*')
+            let l:node = l:self.Backtrack(l:self.trie.wildcard_symbol)
             if l:node != {}
                 let l:self.current = l:node
                 let l:new_string = l:self.trie.GetStringAtNode(l:self.current)
@@ -131,12 +132,12 @@ function! pear_tree#trie#Traverser(trie) abort
         while l:i < a:end
             call l:self.StepOrReset(a:text[(l:i)])
             if l:self.AtWildcard()
-                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
+                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, keys(l:self.current.children), l:i)
                 let l:end_of_wc = min(l:indices) - 1
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
-                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
+                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
                 let l:i = min(l:indices)
             else
                 let l:i = l:i + 1
@@ -160,7 +161,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 return -1
             endif
             if l:self.AtWildcard()
-                let l:indices = [a:end] + pear_tree#util#FindAll(a:text, keys(l:self.current.children), l:i)
+                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, keys(l:self.current.children), l:i)
                 let l:end_of_wc = min(l:indices) - 1
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
@@ -201,7 +202,7 @@ function! pear_tree#trie#Traverser(trie) abort
     endfunction
 
     function! l:obj.AtWildcard() abort
-        return l:self.current.char ==# '*'
+        return l:self.current.char ==# l:self.trie.wildcard_symbol
     endfunction
 
     function! l:obj.AtRoot() abort
@@ -213,7 +214,7 @@ function! pear_tree#trie#Traverser(trie) abort
     endfunction
 
     function! l:obj.GetString() abort
-        return l:self.string
+        return pear_tree#string#Decode(l:self.string, '*', l:self.trie.wildcard_symbol)
     endfunction
 
     function! l:obj.GetRoot() abort

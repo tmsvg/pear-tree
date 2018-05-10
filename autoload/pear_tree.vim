@@ -8,7 +8,7 @@ else
 endif
 
 
-function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
+function! pear_tree#GenerateDelimiter(opener, wildcard) abort
     if !has_key(b:pear_tree_pairs, a:opener)
         return ''
     endif
@@ -16,14 +16,16 @@ function! pear_tree#GenerateDelimiter(opener, wildcard_part) abort
     " Handle the `until` rule.
     let l:match_char = get(l:delim_dict, 'until', '[[:punct:][:space:]]')
     let l:delim = pear_tree#GetDelimiter(a:opener)
-    if a:wildcard_part !=# ''
-        let l:index = match(a:wildcard_part, l:match_char)
+    let l:index = 0
+    if a:wildcard !=# ''
+        let l:index = match(a:wildcard, l:match_char)
         if l:index == 0
             return ''
         endif
         let l:index = max([-1, l:index - 1])
-        let l:delim = substitute(l:delim, '*', a:wildcard_part[:(l:index)], 'g')
     endif
+    " Replace unescaped * chars with the wildcard string.
+    let l:delim = join(pear_tree#string#Encode(l:delim, '*', a:wildcard[:(l:index)]), '')
     return l:delim
 endfunction
 
@@ -69,24 +71,24 @@ function! pear_tree#HandleSimplePair(char) abort
                                                                                             \ || pear_tree#IsClosingBracket(l:char_after_cursor))
                 \ || (has_key(b:pear_tree_pairs, l:char_before_cursor) && pear_tree#GetDelimiter(l:char_before_cursor) ==# l:char_after_cursor)
         let l:delim = pear_tree#GenerateDelimiter(a:char, '')
-        return l:delim . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:delim))
+        return l:delim . repeat(s:LEFT, pear_tree#string#VisualLength(l:delim))
     else
         return ''
     endif
 endfunction
 
 
-function! pear_tree#HandleComplexPair(opener, wildcard_part) abort
+function! pear_tree#HandleComplexPair(opener, wildcard) abort
     let l:delim_dict = get(b:pear_tree_pairs, a:opener)
     " Handle rules
-    if index(get(l:delim_dict, 'not_if', []), a:wildcard_part) > -1
+    if index(get(l:delim_dict, 'not_if', []), a:wildcard) > -1
                 \ || index(get(l:delim_dict, 'not_in', []), pear_tree#cursor#SyntaxRegion()) > -1
         return ''
     elseif (pear_tree#cursor#AtEndOfLine()
                 \ || pear_tree#cursor#CharAfter() =~# '\s'
                 \ || pear_tree#GetSurroundingPair() != {})
-        let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard_part)
-        return l:delim . repeat(s:LEFT, pear_tree#util#VisualStringLength(l:delim))
+        let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard)
+        return l:delim . repeat(s:LEFT, pear_tree#string#VisualLength(l:delim))
     else
         return ''
     endif
@@ -155,10 +157,11 @@ endfunction
 
 " Return the index of the last occurrence of {opener} in {text}.
 function! pear_tree#ReverseOpenerIdx(text, opener, delim, wildcard, start) abort
+    let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*', 0)]
+    let l:opener_hint = join(pear_tree#string#Encode(l:opener_hint, '*', a:wildcard), '')
     if a:wildcard ==# ''
-        return strridx(a:text, a:opener, a:start)
+        return strridx(a:text, l:opener_hint, a:start)
     endif
-    let l:opener_hint = substitute(a:opener[:stridx(a:opener, '*')], '*', a:wildcard, 'g')
     let l:traverser = pear_tree#insert_mode#GetTraverser()
     let l:i = a:start
     while l:i >= 0
@@ -218,7 +221,7 @@ function! pear_tree#JumpOut() abort
     let l:wildcard = l:pair['wildcard']
     let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard)
     if pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard)
-        return repeat(s:RIGHT, pear_tree#util#VisualStringLength(l:delim))
+        return repeat(s:RIGHT, pear_tree#string#VisualLength(l:delim))
     else
         return ''
     endif
@@ -252,7 +255,7 @@ function! pear_tree#PrepareExpansion() abort
     if pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard) && !pear_tree#IsDumbPair(l:pair['delimiter'])
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         call add(s:strings_to_expand, l:text_after_cursor)
-        return repeat("\<Del>", pear_tree#util#VisualStringLength(l:text_after_cursor)) . "\<CR>"
+        return repeat("\<Del>", pear_tree#string#VisualLength(l:text_after_cursor)) . "\<CR>"
     else
         return "\<CR>"
     endif
