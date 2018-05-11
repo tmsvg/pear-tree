@@ -1,6 +1,20 @@
+" Return {string} with all leading a trailing whitespace removed.
+function! pear_tree#string#Trim(string) abort
+    let l:start = 0
+    let l:end = strlen(a:string)
+    while l:start < l:end && a:string[l:start] <=# ' '
+        let l:start = l:start + 1
+    endwhile
+    while l:start < l:end && a:string[l:end - 1] <=# ' '
+        let l:end = l:end - 1
+    endwhile
+    return a:string[(l:start):(l:end - 1)]
+endfunction
+
+
 " Return {string} with all occurrences of {special_char} escaped and all
 " occurrences of {replacement} replaced with unescaped {special_char}.
-function pear_tree#string#Decode(string, special_char, replacement) abort
+function! pear_tree#string#Decode(string, special_char, replacement) abort
     return substitute(escape(a:string, a:special_char . '\\'), a:replacement, a:special_char, 'g')
 endfunction
 

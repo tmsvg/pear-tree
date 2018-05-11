@@ -83,7 +83,7 @@ function! pear_tree#trie#Traverser(trie) abort
         elseif l:self.AtWildcard()
             let l:self.wildcard_string = l:self.wildcard_string . a:char
             return 1
-        " Reached dead end. Attempt to go back to wildcard node.
+        " Reached dead end. Attempt to go back to a wildcard node.
         else
             let l:node = l:self.Backtrack(l:self.trie.wildcard_symbol)
             if l:node != {}
@@ -147,8 +147,10 @@ function! pear_tree#trie#Traverser(trie) abort
 
     " Traverse the substring of {text} that begins at {start} and ends at {end}
     " until a character is reached that requires the traverser to reset.
-    " Return the index of {text} at which the traverser reached a leaf, or -1
-    " if the traverser did not reach a leaf.
+    " Condition                                           Return Value
+    " Reached a leaf                                      The index of {text}.
+    " Reached the end without reaching a leaf             0
+    " Reset before reaching the end                       -1
     function! l:obj.WeakTraverse(text, start, end) abort
         let l:i = a:start
         while l:i < a:end
@@ -169,6 +171,37 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:i = l:i + 1
             endif
         endwhile
+        return 0
+    endfunction
+
+    " Traverse the text in the buffer from {start_position} to {end_position}
+    " where both positions are given as a tuple of the form
+    " [line_number, column_number].
+    function! l:obj.TraverseBuffer(start_position, end_position)
+        let l:min_position = a:end_position
+        for l:str in l:self.trie.GetStrings()
+            if strlen(l:str) == 1
+                continue
+            endif
+            let l:idx = pear_tree#buffer#Search(l:str[0], pear_tree#buffer#ReverseSearch(l:str[strlen(l:str) - 1], a:end_position))
+            if pear_tree#buffer#ComparePositions(l:idx, l:min_position) < 0 && pear_tree#buffer#ComparePositions(l:idx, a:start_position) >= 0
+                let l:min_position = l:idx
+            endif
+        endfor
+        for l:line in getline(l:min_position[0], a:end_position[0])
+            call l:self.Traverse(l:line, 0, strlen(l:line))
+            call l:self.StepOrReset(' ')
+        endfor
+    endfunction
+
+    function! l:obj.WeakTraverseBuffer(start_position, end_position) abort
+        let l:start_column = a:start_position[1]
+        for l:line in getline(a:start_position[0], a:end_position[0])
+            let l:start_column = l:self.WeakTraverse(l:line, l:start_column, strlen(l:line))
+            if l:start_column != 0
+                return l:start_column
+            endif
+        endfor
     endfunction
 
     function! l:obj.StepToParent() abort

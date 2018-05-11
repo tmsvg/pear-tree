@@ -8,6 +8,11 @@ function! pear_tree#cursor#CharAfter() abort
 endfunction
 
 
+function! pear_tree#cursor#TextBefore()
+    return getline('.')[:(col('.') - 2)]
+endfunction
+
+
 function! pear_tree#cursor#TextAfter()
     return getline('.')[(col('.') - 1):]
 endfunction
