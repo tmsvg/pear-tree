@@ -1,6 +1,6 @@
 Pear Tree
 ===========
-A simple, powerful Vim auto-pair plugin.
+A painless, powerful Vim auto-pair plugin.
 
 Purpose
 -------
@@ -16,7 +16,7 @@ Plug 'tmsvg/pear-tree'
 
 Features
 --------
-Pear Tree provides features typical of other auto-closing plugins. However, a few features differentiate it from the rest.
+Pear Tree provides features typical of other auto-pairing plugins. However, a few features differentiate it from the rest.
 
 ### Multi-Character Pair Support
 
@@ -110,7 +110,7 @@ To include a literal asterisk in a rule, you must escape it with a backslash lik
 
 #### Options
 
-A Pear Tree rule supports several options to more finely tune its matching behavior.
+A Pear Tree rule includes several options to more finely tune its matching behavior.
 
 - `not_in`
     - Form: `'not_in': [syntax region, ...]`,
@@ -168,7 +168,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
     - Default mapping: `<ESC>`
 
 - `<Plug>(PearTreeJump)`
-    - If the cursor is before a delimiter whose opener is earlier on the same line, move the cursor past the delimiter.
+    - If the cursor is before a delimiter whose opener appears earlier in the text, move the cursor past the delimiter.
     - Example:
         ```html
         1  <p class="Foo">Hello, world!|</p>
@@ -211,7 +211,7 @@ A Pear Tree rule supports several options to more finely tune its matching behav
 
 
 - `<Plug>(PearTreeJNR)`
-    - If the cursor is before a delimiter whose opener is earlier on the same line, move the cursor past the delimiter and insert a newline ("jump 'n return").
+    - If the cursor is before a delimiter whose opener appears earlier in the text, move the cursor past the delimiter and insert a newline ("jump 'n return").
     - Example:
         ```html
         1  <p class="Foo">Hello, world!|</p>
