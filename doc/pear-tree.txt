@@ -1,0 +1,244 @@
+*pear-tree.txt*    A painless, powerful Vim auto-pair plugin
+
+                                  Pear Tree
+Contents                                                           *pear-tree*
+
+    1. Introduction ....................... |pear-tree-introduction|
+    2. Configuration ...................... |pear-tree-configuration|
+
+==============================================================================
+1. Introduction                                       *pear-tree-introduction*
+
+Pear Tree automatically pairs braces, quotes, HTML tags, and many other text
+items based on a simple-to-define set of rules, and provides pair-wise
+deletion, newline expansion, and other usual auto-pair features.
+
+Pear Tree aims to be non-intrusive and does not break Vim's built-in
+dot-repeat or undo functionality.
+
+==============================================================================
+2. Configuration                                      *pear-tree-configuration*
+
+Variables:
+
+    g:pear_tree_pairs ..................... |g:pear_tree_pairs|
+    g:pear_tree_ft_disabled ............... |g:pear_tree_ft_disabled|
+
+Mappings:
+
+    <Plug>(PearTreeBackspace) ............. |<Plug>(PearTreeBackspace)|
+    <Plug>(PearTreeExpand) ................ |<Plug>(PearTreeExpand)|
+    <Plug>(PearTreeFinishExpansion) ....... |<Plug>(PearTreeFinishExpansion)|
+    <Plug>(PearTreeJump) .................. |<Plug>(PearTreeJump)|
+    <Plug>(PearTreeExpandOne) ............. |<Plug>(PearTreeExpandOne)|
+    <Plug>(PearTreeJNR) ................... |<Plug>(PearTreeJNR)|
+
+------------------------------------------------------------------------------
+                                                            *g:pear_tree_pairs*
+                                                            *b:pear_tree_pairs*
+Type: Dictionary
+
+Default: >
+    {
+    \   '(': {'delimiter': ')'},
+    \   '[': {'delimiter': ']'},
+    \   '{': {'delimiter': '}'},
+    \   "'": {'delimiter': "'", 'not_in': ['String']},
+    \   '"': {'delimiter': '"', 'not_in': ['String']}
+    \ }
+<
+Define the opening strings and the delimiters with which they are to be
+matched. Buffer-local rules take priority over global rules. Define
+`b:pear_tree_pairs` in the appropriate file in your ftplugin folder to
+override the default rules for certain filetypes.
+
+Each rule in `g:pear_tree_pairs` has the following form: >
+    opener: {'delimiter': delimiter, [options ...]}
+<
+In the rule, `opener` is the string that must be typed, and `delimiter` is the
+string to be automatically inserted. Both may be any length and may contain a
+wildcard, (see |pear-tree-wildcards|).
+
+Each rule can also contain options that modify the pairing behavior
+(see |pear-tree-rule-options|).
+
+*pear-tree-wildcards*
+
+Pear Tree supports wildcard matching in string pairs. Wildcards are specified
+by using an asterisk `*` within the pairs. A wildcard matches user input until
+the next explicitly defined character in the opener is entered.
+
+A wildcard in the delimiter is replaced by the string of characters to which
+the wildcard character in the opener was matched. As an example, with
+`g:pear_tree_pairs` containing the following rule: >
+    '<*>': {'delimiter': '</*>'}
+<Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, etc.
+
+To include a literal asterisk in a rule, you must escape it with a backslash
+like `\*`. Similarly, to include a literal backslash in a rule, you must
+escape it with another backslash like `\\`.
+
+*pear-tree-rule-options*
+
+A Pear Tree rule includes several options to more finely tune its matching
+behavior:
+
+    `not_in`
+    Form: `'not_in': [syntax_region, ...]`
+    Function: Do not match the opener you are typing in a syntax region
+              contained in the list (requires syntax to be enabled).
+    Example: `'(': {'delimiter': ')', 'not_in': ['String', 'Comment']}`
+
+    `not_if`
+    Form: `'not_if': [string, ...]`
+    Function: Do not match an opener that contains a wildcard if the value of
+              that wildcard is contained in the list.
+    Example: `'<*>': {'delimiter': '</*>', 'not_if': ['br', 'meta']}`
+
+    `until`
+    Form: `'until': regexp`
+    Function: Replace the wildcard character in the delimiter with the
+              wildcard string in the opener only until the regexp pattern is
+              matched. See `:h match()` for valid patterns.
+    Example: `'<*>': {'delimiter': '</*>', 'until': '\W'}`
+             Typing `<p class="Foo">` yields `<p class="Foo"></p>`, and not
+             `<p class="Foo"></p class="Foo">` because the space after `<p`
+             matches the regexp pattern `'\W'`.
+    If not set, the value is `'[[:punct:][:space:]]'` (punctuation or space).
+
+------------------------------------------------------------------------------
+                                                      *g:pear_tree_ft_disabled*
+Type: List
+
+Default: `[]`
+
+Define filetypes for which Pear Tree should not be enabled.
+
+Example: >
+    let g:pear_tree_ft_disabled = ['c', 'python', 'markdown']
+<
+------------------------------------------------------------------------------
+                                                    *<Plug>(PearTreeBackspace)*
+Default: `<BS>`
+
+If the cursor is between an opener and delimiter, delete both. Otherwise, act
+like a typical backspace.
+
+Usage: return foo(|) -> return foo|
+
+To change the default mapping, add something like the following to your vimrc:
+>
+    imap <Plug>(PearTreeBackspace) <C-b>
+<
+------------------------------------------------------------------------------
+                                                       *<Plug>(PearTreeExpand)*
+Default: `<CR>`
+
+If cursor is between an opener and delimiter, add a new line and prepare to
+add the delimiter on the line following the cursor's new position.
+
+In order to not break the |.| command, the delimiter is temporarily erased. It
+will automatically be added back to the line following the cursor by
+|<Plug>(PearTreeFinishExpansion)|
+
+Usage: >
+    1  int foo() {|}
+<
+->
+>
+    1  int foo() {
+    2      |
+    3
+<
+To change the default mapping, add something like the following to your vimrc:
+>
+    imap <Plug>(PearTreeExpand) <C-j>
+<
+------------------------------------------------------------------------------
+                                              *<Plug>(PearTreeFinishExpansion)*
+Default: `<ESC>`
+
+If |<Plug>(PearTreeExpand)| has been used, add the delimiters to their proper
+positions. After they have been restored, leave insert mode.
+
+Usage: >
+    1  int foo() {
+    2      |
+    3
+<
+->
+>
+    1  int foo() {
+    2      []
+    3  }
+<
+To change the default mapping, add something like the following to your vimrc:
+>
+    imap <Plug>(PearTreeFinishExpansion) <C-b>
+<
+------------------------------------------------------------------------------
+                                                         *<Plug>(PearTreeJump)*
+Default: `<C-l>`
+
+If the cursor is before a delimiter whose opener appears earlier in the text,
+move the cursor past the delimiter.
+
+Usage: >
+    1  <p class="Foo">Hello, world!|</p>
+<
+->
+>
+    1  <p class="Foo">Hello, world!</p>|
+<
+To set the mapping, add something like the following to your vimrc:
+>
+    imap <Plug>(PearTreeJump) <C-l>
+<
+------------------------------------------------------------------------------
+                                                    *<Plug>(PearTreeExpandOne)*
+Default: None
+
+If |<Plug>(PearTreeExpand)| has been used multiple times, leading to nested
+pairs, add only the innermost delimiter to its proper position.
+
+Usage: >
+    1  <html>
+    2      <body>
+    3           <p>Type this and go to the next line.</p>
+    4           |
+    5
+<
+->
+>
+    1  <html>
+    2      <body>
+    3           <p>Type this and go to the next line.</p>
+    4      </body>|
+    5
+<
+To set the mapping, add something like the following to your vimrc:
+>
+    imap <Plug>(PearTreeExpandOne) <C-z>
+<
+------------------------------------------------------------------------------
+                                                          *<Plug>(PearTreeJNR)*
+Default: None
+
+If the cursor is before a delimiter whose opener appears earlier in the text,
+move the cursor past the delimiter and insert a newline ("jump 'n return").
+
+Usage: >
+    1  <p class="Foo">Hello, world!|</p>
+<
+->
+>
+    1  <p class="Foo">Hello, world!</p>
+    2  |
+<
+To set the mapping, add something like the following to your vimrc:
+>
+    imap <Plug>(PearTreeExpandOne) <C-j>
+<
+------------------------------------------------------------------------------
+
+" vim:tw=78:ts=4:sts=4:sw=4:ft=help:norl:
