@@ -4,7 +4,9 @@ A painless, powerful Vim auto-pair plugin.
 
 Purpose
 -------
-**Pear Tree** was originally intended to simply be an easily configurable auto-pairing plugin that wouldn't break undo or dot-repeat. Later on, I found a pretty nifty way to allow for the pairing of strings longer than a single character and even strings containing wildcard rules.
+**Pear Tree** automatically pairs braces, quotes, HTML tags, and many other text items based on a simple-to-define set of rules, and provides pair-wise deletion, newline expansion, and other usual auto-pair features.
+
+Though Pear Tree was originally intended to simply be an easily configurable auto-pairing plugin that wouldn't break undo or dot-repeat, I later found a nice way to allow for the pairing of strings longer than a single character and strings containing wildcard rules. This allows Pear Tree to easily match HTML tags and C-style block comment delimiters using simple rule definitions.
 
 Installation
 ------------
@@ -16,7 +18,6 @@ Plug 'tmsvg/pear-tree'
 
 Features
 --------
-Pear Tree provides features typical of other auto-pairing plugins. However, a few features differentiate it from the rest.
 
 ### Multi-Character Pair Support
 
@@ -28,7 +29,7 @@ A powerful feature of Pear Tree is its support for wildcard string matching. Thi
 
 ### Dot-Repeatability
 
-Pear Tree is (to my knowledge) the only plugin of its kind that allows brace expansion while not breaking Vim's dot-repeat *or* undo functionality. Consider this example:
+Pear Tree allows brace expansion without breaking Vim's dot-repeat *or* undo functionality. Consider this example:
 
 ```c
 1  int foo();|
@@ -78,6 +79,7 @@ Finally, move to line 5 and use the `.` command:
 7  }
 ```
 
+Many implementations of this feature would cause the `.` command to only repeat `return 1;` instead of the entire typing sequence.
 
 Usage
 -------
