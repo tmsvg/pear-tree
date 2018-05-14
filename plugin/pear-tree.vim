@@ -20,6 +20,9 @@ if !exists('g:pear_tree_ft_disabled')
     let g:pear_tree_ft_disabled = []
 endif
 
+if !exists('g:pear_tree_smart_backspace')
+    let g:pear_tree_smart_backspace = 0
+endif
 
 function! s:BufferEnable()
     if exists('b:pear_tree_enabled') && b:pear_tree_enabled

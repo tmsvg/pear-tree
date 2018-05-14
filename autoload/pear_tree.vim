@@ -173,23 +173,41 @@ endfunction
 " Determine if {delim} is balanced with {opener} in the buffer. If it is,
 " return the line on which the pair was determined to be balanced. Otherwise,
 " return 0.
-function! pear_tree#IsBalancedPair(opener, delim, wildcard) abort
+function! pear_tree#IsBalancedPair(opener, delim, wildcard, start, ...) abort
+    " Initialize the stack that will be used in determining pair balance. Each
+    " time an opener is found, the stack is popped. Each time a delimiter is
+    " found, a dummy value is pushed onto the stack.
     let l:stack = []
 
-    let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*', 0)]
-    let l:opener_hint = join(pear_tree#string#Encode(l:opener_hint, '*', a:wildcard), '')
+    " Handle an optional argument that tells the function to ignore the first
+    " {l:ignore_count} openers. This can be used to see if the delimiter after
+    " the cursor will be balanced even if the previous {l:ignore_count}
+    " openers were to be deleted.
+    let l:ignore_count = a:0 ? a:1 : 0
+    for l:_ in range(1, l:ignore_count)
+        call add(l:stack, 0)
+    endfor
 
-    let l:traverser = pear_tree#insert_mode#GetTraverser()
+    if a:wildcard !=# ''
+        " Generate a hint to find openers faster when the pair contains a
+        " wildcard. The {wildcard} is the wildcard string as it appears in the
+        " delimiter, so it may be a trimmed version of the opener's wildcard.
+        let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*', 0)]
+        let l:opener_hint = join(pear_tree#string#Encode(l:opener_hint, '*', a:wildcard), '')
 
-    let l:current_position = [line('.'), col('.') - 1]
+        let l:traverser = pear_tree#insert_mode#GetTraverser()
+    endif
+
+    let l:current_position = a:start
     let l:delim_position = [l:current_position[0], l:current_position[1] + 1]
     let l:opener_position = [l:current_position[0], l:current_position[1] + 1]
     while l:current_position[0] > -1
-        if pear_tree#buffer#ComparePositions(l:opener_position, l:current_position) >= 0
+        " Find the previous opener and delimiter in the buffer.
+        if pear_tree#buffer#ComparePositions(l:opener_position, l:current_position) > 0
             if a:wildcard ==# ''
-                let l:opener_position = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_position)
+                let l:opener_position = pear_tree#buffer#ReverseSearch(a:opener, l:current_position)
             else
-                let l:search_position = l:current_position
+                let l:search_position = [l:current_position[0], l:current_position[1]]
                 while l:search_position[0] > -1
                     let l:search_position = pear_tree#buffer#ReverseSearch(l:opener_hint, l:search_position)
                     let l:end_position = pear_tree#buffer#Search(a:opener[strlen(a:opener) - 1], l:search_position)
@@ -203,24 +221,24 @@ function! pear_tree#IsBalancedPair(opener, delim, wildcard) abort
                 let l:opener_position = l:search_position
             endif
         endif
-        if pear_tree#buffer#ComparePositions(l:delim_position, l:current_position) >= 0
+        if pear_tree#buffer#ComparePositions(l:delim_position, l:current_position) > 0
             let l:delim_position = pear_tree#buffer#ReverseSearch(a:delim, l:current_position)
         endif
         if l:delim_position[0] != -1
                     \ && pear_tree#buffer#ComparePositions(l:delim_position, l:opener_position) >= 0
                     \ && !(l:stack != [] && pear_tree#IsDumbPair(a:delim))
             call add(l:stack, 0)
-            let l:current_position = l:delim_position
+            let l:current_position = [l:delim_position[0], l:delim_position[1] - 1]
         elseif l:opener_position[0] != -1 && l:stack != []
             call remove(l:stack, -1)
             if l:stack == []
-                return a:wildcard ==# '' ? (l:opener_position[0]) : (l:end_position[0])
+                return a:wildcard ==# '' ? l:opener_position[0]
+                                       \ : l:end_position[0]
             endif
-            let l:current_position = l:opener_position
+            let l:current_position = [l:opener_position[0], l:opener_position[1] - 1]
         else
             return 0
         endif
-        let l:current_position[1] = l:current_position[1] - 1
     endwhile
 endfunction
 
@@ -233,7 +251,7 @@ function! pear_tree#JumpOut() abort
     let l:opener = l:pair['opener']
     let l:wildcard = l:pair['wildcard']
     let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard)
-    if pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard)
+    if pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard, [line('.'), col('.') - 1])
         return repeat(s:RIGHT, pear_tree#string#VisualLength(l:delim))
     else
         return ''
@@ -247,13 +265,42 @@ endfunction
 
 
 function! pear_tree#Backspace() abort
-    let l:char_after_cursor = pear_tree#cursor#CharAfter()
     let l:char_before_cursor = pear_tree#cursor#CharBefore()
-    if has_key(b:pear_tree_pairs, l:char_before_cursor)
-                \ && l:char_after_cursor ==# pear_tree#GetDelimiter(l:char_before_cursor)
-        return "\<Del>\<BS>"
+    if !has_key(b:pear_tree_pairs, l:char_before_cursor)
+        return "\<BS>"
     endif
-    return "\<BS>"
+    let l:char_after_cursor = pear_tree#cursor#CharAfter()
+
+    let l:next_opener = pear_tree#buffer#Search(l:char_before_cursor, [line('.'), col('.')])
+    let l:next_delim = pear_tree#buffer#Search(l:char_after_cursor, [line('.'), col('.')])
+
+    if pear_tree#GetDelimiter(l:char_before_cursor) !=# l:char_after_cursor
+        let l:should_delete_both = 0
+    elseif pear_tree#IsDumbPair(l:char_before_cursor)
+        let l:should_delete_both = 1
+    elseif get(g:, 'pear_tree_smart_backspace', 0) || get(b:, 'pear_tree_smart_backspace', 0)
+        " Get the first delimiter after the cursor not preceded by an opener.
+        while pear_tree#buffer#ComparePositions(l:next_opener, l:next_delim) < 0
+                    \ && l:next_delim[0] != -1 && l:next_opener[0] != -1
+            let l:next_delim[1] += 1
+            let l:next_delim = pear_tree#buffer#Search(l:char_after_cursor, l:next_delim)
+            let l:next_opener[1] += 1
+            let l:next_opener = pear_tree#buffer#Search(l:char_before_cursor, l:next_opener)
+        endwhile
+        let l:next_delim = pear_tree#buffer#ReverseSearch(l:char_after_cursor, l:next_opener)
+        if l:next_delim == [-1, -1]
+            let l:next_delim = [line('$'), strlen(getline('$'))]
+        endif
+        " Will deleting both make the next delimiter unbalanced?
+        let l:should_delete_both = !pear_tree#IsBalancedPair(l:char_before_cursor, l:char_after_cursor, '', l:next_delim, 1)
+    else
+        let l:should_delete_both = 1
+    endif
+    if l:should_delete_both
+        return "\<Del>\<BS>"
+    else
+        return "\<BS>"
+    endif
 endfunction
 
 
@@ -262,10 +309,13 @@ function! pear_tree#PrepareExpansion() abort
     if l:pair == {}
         return "\<CR>"
     endif
+
     let l:opener = l:pair['opener']
     let l:wildcard = l:pair['wildcard']
     let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard)
-    let l:opener_line = pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard)
+
+    let l:opener_line = pear_tree#IsBalancedPair(l:opener, l:delim, l:wildcard, [line('.'), col('.') - 1])
+
     if (l:opener_line == line('.') && (l:wildcard !=# '' || strridx(getline('.'), l:opener) == col('.') - strlen(l:opener) - 1))
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         call add(s:strings_to_expand, l:text_after_cursor)

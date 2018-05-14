@@ -4,7 +4,7 @@ function! pear_tree#buffer#Search(string, start_position) abort
     let l:col = stridx(getline(l:line), a:string, a:start_position[1])
     while l:col == -1 && l:line < line('$')
         let l:line = l:line + 1
-        let l:col = strridx(getline(l:line), a:string)
+        let l:col = stridx(getline(l:line), a:string)
     endwhile
     return l:col == -1 ? [-1, -1] : [l:line, l:col]
 endfunction
