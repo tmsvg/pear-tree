@@ -188,10 +188,14 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:min_position = l:idx
             endif
         endfor
-        for l:line in getline(l:min_position[0], a:end_position[0])
+        let l:line = getline(l:min_position[0])
+        call l:self.Traverse(l:line, l:min_position[1], strlen(l:line))
+        for l:line in getline(l:min_position[0], a:end_position[0] - 1)
             call l:self.Traverse(l:line, 0, strlen(l:line))
             call l:self.StepOrReset(' ')
         endfor
+        let l:line = getline(a:end_position[0])
+        call l:self.Traverse(l:line, 0, a:end_position[1])
     endfunction
 
     function! l:obj.WeakTraverseBuffer(start_position, end_position) abort

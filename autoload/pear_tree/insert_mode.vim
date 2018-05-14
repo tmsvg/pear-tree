@@ -21,9 +21,9 @@ function! pear_tree#insert_mode#CursorMoved() abort
     let l:new_col = col('.')
     if l:new_line != s:current_line || l:new_col < s:current_column
         call s:traverser.Reset()
-        call s:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col])
+        call s:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
     elseif l:new_col > s:current_column
-        call s:traverser.TraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col])
+        call s:traverser.TraverseBuffer([1, s:current_column - 1], [l:new_line, l:new_col - 1])
     endif
     let s:current_column = l:new_col
     let s:current_line = l:new_line
