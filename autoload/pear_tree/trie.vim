@@ -138,7 +138,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
                 let l:indices = [a:end] + pear_tree#string#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
-                let l:i = min(l:indices)
+                let l:i = max([l:i + 1, min(l:indices)])
             else
                 let l:i = l:i + 1
             endif
