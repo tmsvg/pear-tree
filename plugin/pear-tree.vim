@@ -28,9 +28,6 @@ function! s:BufferEnable()
     if exists('b:pear_tree_enabled') && b:pear_tree_enabled
         return
     endif
-    if !exists('b:pear_tree_pairs')
-        let b:pear_tree_pairs = g:pear_tree_pairs
-    endif
 
     let l:trie = pear_tree#trie#New()
     call s:MapPairs(l:trie)
@@ -50,7 +47,7 @@ endfunction
 
 
 function! s:MapPairs(trie)
-    for [l:opener, l:delimiter] in items(b:pear_tree_pairs)
+    for [l:opener, l:delimiter] in items(pear_tree#Pairs())
         let l:delimiter = get(l:delimiter, 'delimiter')
         call a:trie.Insert(l:opener)
 

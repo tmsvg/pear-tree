@@ -1,25 +1,31 @@
+function! s:ShouldSkip(position, skip_list)
+    return a:skip_list != [] && index(a:skip_list, pear_tree#buffer#SyntaxRegion(a:position)) > -1
+endfunction
+
 " Search through the buffer for {string} beginning at {start_position}.
-function! pear_tree#buffer#Search(string, start_position) abort
+function! pear_tree#buffer#Search(string, start_position, ...) abort
+    let l:skip_regions = a:0 ? a:1 : []
     let l:line = a:start_position[0]
     let l:col = stridx(getline(l:line), a:string, a:start_position[1])
-    while l:col == -1 && l:line < line('$')
+    while l:line < line('$') && (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions))
         let l:line = l:line + 1
         let l:col = stridx(getline(l:line), a:string)
     endwhile
-    return l:col == -1 ? [-1, -1] : [l:line, l:col]
+    return (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions)) ? [-1, -1] : [l:line, l:col]
 endfunction
 
 
 " Search backwards through the buffer for {string} beginning at
 " {start_position}.
-function! pear_tree#buffer#ReverseSearch(string, start_position) abort
+function! pear_tree#buffer#ReverseSearch(string, start_position, ...) abort
+    let l:skip_regions = a:0 ? a:1 : []
     let l:line = a:start_position[0]
     let l:col = strridx(getline(l:line), a:string, a:start_position[1])
-    while l:col == -1 && l:line > 1
+    while l:line > 1 && (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions))
         let l:line = l:line - 1
         let l:col = strridx(getline(l:line), a:string)
     endwhile
-    return l:col == -1 ? [-1, -1] : [l:line, l:col]
+    return (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions)) ? [-1, -1] : [l:line, l:col]
 endfunction
 
 
@@ -40,4 +46,9 @@ function! pear_tree#buffer#ComparePositions(pos1, pos2) abort
     else
         return -1
     endif
+endfunction
+
+
+function! pear_tree#buffer#SyntaxRegion(position) abort
+    return synIDattr(synIDtrans(synID(a:position[0], a:position[1], 1)), 'name')
 endfunction

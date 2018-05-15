@@ -1,3 +1,8 @@
+function! pear_tree#cursor#Position()
+    return [line('.'), col('.')]
+endfunction
+
+
 function! pear_tree#cursor#CharBefore() abort
     return matchstr(getline('.'), '\%' . (col('.') - 1) . 'c.')
 endfunction
