@@ -24,41 +24,68 @@ if !exists('g:pear_tree_smart_backspace')
     let g:pear_tree_smart_backspace = 0
 endif
 
+
 function! s:BufferEnable()
     if exists('b:pear_tree_enabled') && b:pear_tree_enabled
         return
     endif
-
-    let l:trie = pear_tree#trie#New()
-    call s:MapPairs(l:trie)
-
-    if exists('s:mappings')
-        for l:map in keys(s:mappings)
-            execute 'imap <buffer> ' . l:map . ' ' . s:mappings[l:map]
+    call s:MapPairs()
+    if exists('s:saved_mappings')
+        for l:map in keys(s:saved_mappings)
+            execute 'imap <buffer> ' . l:map . ' ' . s:saved_mappings[l:map]
         endfor
     else
         call s:MapDefaults()
     endif
-
-    call pear_tree#insert_mode#Prepare(l:trie)
-
+    call pear_tree#insert_mode#Prepare()
     let b:pear_tree_enabled = 1
 endfunction
 
 
-function! s:MapPairs(trie)
+function! s:BufferDisable()
+    if !(exists('b:pear_tree_enabled') && b:pear_tree_enabled)
+        return
+    endif
+    call s:UnmapPairs()
+
+    let s:saved_mappings = {}
+    for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
+        let l:map_arg = maparg(l:map, 'i')
+        if l:map_arg =~# '^<Plug>(PearTree'
+            let s:saved_mappings[l:map] = l:map_arg
+            execute 'silent! iunmap <buffer> ' . l:map
+        endif
+    endfor
+    let b:pear_tree_enabled = 0
+endfunction
+
+
+function! s:MapPairs()
     for [l:opener, l:delimiter] in items(pear_tree#Pairs())
-        let l:delimiter = get(l:delimiter, 'delimiter')
-        call a:trie.Insert(l:opener)
-
         let l:opener = l:opener[-1:]
-        let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
+        let l:delimiter = get(l:delimiter, 'delimiter')
 
+        let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
         execute 'inoremap <silent> <expr> <buffer> ' . l:opener . ' pear_tree#TerminateOpener(''' . l:escaped_opener . ''')'
 
-        if strlen(l:delimiter) == 1 && !has_key(g:pear_tree_pairs, l:delimiter)
+        if strlen(l:delimiter) == 1 && !has_key(pear_tree#Pairs(), l:delimiter)
             let l:escaped_delimiter = substitute(l:delimiter, "'", "''", 'g')
             execute 'inoremap <silent> <expr> <buffer> ' . l:delimiter . ' pear_tree#OnPressDelimiter(''' . l:escaped_delimiter . ''')'
+        endif
+    endfor
+endfunction
+
+
+function! s:UnmapPairs()
+    for [l:opener, l:delimiter] in items(pear_tree#Pairs())
+        let l:opener = l:opener[-1:]
+        if maparg(l:opener, 'i') =~# '^pear_tree#'
+            execute 'silent! iunmap <buffer> ' . l:opener
+        endif
+
+        let l:delimiter = get(l:delimiter, 'delimiter')
+        if maparg(l:delimiter, 'i') =~# '^pear_tree#'
+            execute 'silent! iunmap <buffer> ' . l:opener
         endif
     endfor
 endfunction
@@ -68,40 +95,15 @@ function! s:MapDefaults()
     if !hasmapto('<Plug>(PearTreeBackspace)', 'i')
         imap <buffer> <BS> <Plug>(PearTreeBackspace)
     endif
-
     if !hasmapto('<Plug>(PearTreeExpand)', 'i')
         imap <buffer> <CR> <Plug>(PearTreeExpand)
     endif
-
     if !hasmapto('<Plug>(PearTreeFinishExpansion)', 'i')
         imap <buffer> <ESC> <Plug>(PearTreeFinishExpansion)
     endif
-
     if !hasmapto('<Plug>(PearTreeJump)', 'i')
         imap <buffer> <C-l> <Plug>(PearTreeJump)
     endif
-endfunction
-
-
-function! s:BufferDisable()
-    if !exists('b:pear_tree_enabled') || !b:pear_tree_enabled
-        return
-    endif
-    let s:mappings = {}
-    " Unmap keys
-    for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
-        if l:map =~# '^<Plug>(PearTree'
-            continue
-        endif
-        let l:map_arg = maparg(l:map, 'i')
-        if l:map_arg =~# '^pear_tree#'
-            execute 'silent! iunmap <buffer> ' . l:map
-        elseif l:map_arg =~# '^<Plug>(PearTree'
-            let s:mappings[l:map] = l:map_arg
-            execute 'silent! iunmap <buffer> ' . l:map
-        endif
-    endfor
-    let b:pear_tree_enabled = 0
 endfunction
 
 

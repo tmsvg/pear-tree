@@ -5,7 +5,7 @@ function! pear_tree#trie#New() abort
 
     function! l:obj.Insert(str) abort
         let l:current = l:self.root
-        for l:ch in pear_tree#string#Encode(a:str, '*', l:self.wildcard_symbol)
+        for l:ch in pear_tree#string#Tokenize(a:str, '*', l:self.wildcard_symbol)
             if !has_key(l:current.children, l:ch)
                 let l:node = pear_tree#trie#Node(l:ch)
                 let l:current.children[l:ch] = l:node
@@ -188,24 +188,32 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:min_position = l:idx
             endif
         endfor
-        let l:line = getline(l:min_position[0])
-        call l:self.Traverse(l:line, l:min_position[1], strlen(l:line))
-        for l:line in getline(l:min_position[0], a:end_position[0] - 1)
-            call l:self.Traverse(l:line, 0, strlen(l:line))
-            call l:self.StepOrReset(' ')
-        endfor
-        let l:line = getline(a:end_position[0])
-        call l:self.Traverse(l:line, 0, a:end_position[1])
+        if l:min_position[0] == a:end_position[0]
+            let l:line = getline(l:min_position[0])
+            call l:self.Traverse(l:line, l:min_position[1], a:end_position[1])
+        else
+            let l:line = getline(l:min_position[0])
+            call l:self.Traverse(l:line, l:min_position[1], strlen(l:line))
+            for l:line in getline(l:min_position[0], a:end_position[0] - 1)
+                call l:self.Traverse(l:line, 0, strlen(l:line))
+                call l:self.StepOrReset(' ')
+            endfor
+            let l:line = getline(a:end_position[0])
+            call l:self.Traverse(l:line, 0, a:end_position[1])
+        endif
     endfunction
 
     function! l:obj.WeakTraverseBuffer(start_position, end_position) abort
         let l:start_column = a:start_position[1]
+        let l:lnum = a:start_position[0]
         for l:line in getline(a:start_position[0], a:end_position[0])
             let l:start_column = l:self.WeakTraverse(l:line, l:start_column, strlen(l:line))
-            if l:start_column != 0
-                return l:start_column
+            if l:start_column > 0
+                return [l:lnum, l:start_column]
             endif
+            let l:lnum = l:lnum + 1
         endfor
+        return [-1, -1]
     endfunction
 
     function! l:obj.StepToParent() abort

@@ -49,6 +49,11 @@ function! pear_tree#buffer#ComparePositions(pos1, pos2) abort
 endfunction
 
 
+function pear_tree#buffer#End() abort
+    return [line('$'), strlen(getline('$'))]
+endfunction
+
+
 function! pear_tree#buffer#SyntaxRegion(position) abort
     return synIDattr(synIDtrans(synID(a:position[0], a:position[1], 1)), 'name')
 endfunction

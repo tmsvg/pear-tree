@@ -19,9 +19,10 @@ function! pear_tree#string#Decode(string, special_char, replacement) abort
 endfunction
 
 
-" Return {string} with all unescaped occurrences of {special_char} replaced
-" with {replacement} and all escaped occurrences of {special_char} unescaped.
-function! pear_tree#string#Encode(string, special_char, replacement) abort
+" Return a list that consists of characters in {string} with all unescaped
+" occurrences of {special_char} replaced with {replacement} and all escaped
+" occurrences of {special_char} unescaped.
+function! pear_tree#string#Tokenize(string, special_char, replacement) abort
     let l:is_esc = 0
     let l:tokens = []
     for l:ch in split(a:string, '\zs')
@@ -40,10 +41,17 @@ function! pear_tree#string#Encode(string, special_char, replacement) abort
 endfunction
 
 
+" Return {string} with all unescaped occurrences of {special_char} replaced
+" with {replacement} and all escaped occurrences of {special_char} unescaped.
+function! pear_tree#string#Encode(string, special_char, replacement) abort
+    return join(pear_tree#string#Tokenize(a:string, a:special_char, a:replacement), '')
+endfunction
+
+
 " Return the index of the first unescaped occurrence of {special_char} in
 " {string}, with the search starting at {start}.
 function! pear_tree#string#UnescapedStridx(string, special_char, start)
-    return index(pear_tree#string#Encode(a:string, a:special_char, '__'), '__', a:start)
+    return index(pear_tree#string#Tokenize(a:string, a:special_char, '__'), '__', a:start)
 endfunction
 
 
