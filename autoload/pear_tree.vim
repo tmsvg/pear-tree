@@ -164,7 +164,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         " Generate a hint to find openers faster when the pair contains a
         " wildcard. The {wildcard} is the wildcard string as it appears in the
         " delimiter, so it may be a trimmed version of the opener's wildcard.
-        let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*', 0)]
+        let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
         let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
 
         let l:traverser = pear_tree#insert_mode#GetTraverser()

@@ -50,8 +50,9 @@ endfunction
 
 " Return the index of the first unescaped occurrence of {special_char} in
 " {string}, with the search starting at {start}.
-function! pear_tree#string#UnescapedStridx(string, special_char, start)
-    return index(pear_tree#string#Tokenize(a:string, a:special_char, '__'), '__', a:start)
+function! pear_tree#string#UnescapedStridx(string, special_char, ...)
+    let l:start = a:0 ? a:1 : 0
+    return index(pear_tree#string#Tokenize(a:string, a:special_char, '__'), '__', l:start)
 endfunction
 
 

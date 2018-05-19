@@ -5,13 +5,17 @@ endfunction
 " Search through the buffer for {string} beginning at {start_position}.
 function! pear_tree#buffer#Search(string, start_position, ...) abort
     let l:skip_regions = a:0 ? a:1 : []
-    let l:line = a:start_position[0]
-    let l:col = stridx(getline(l:line), a:string, a:start_position[1])
-    while l:line < line('$') && (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions))
-        let l:line = l:line + 1
-        let l:col = stridx(getline(l:line), a:string)
+    let l:lnum = a:start_position[0]
+    let l:line = getline(l:lnum)
+    let l:col = stridx(l:line, a:string, a:start_position[1])
+    while l:lnum < line('$') && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
+        if l:col == -1
+            let l:lnum = l:lnum + 1
+            let l:line = getline(l:lnum)
+        endif
+        let l:col = stridx(l:line, a:string, l:col + 1)
     endwhile
-    return (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions)) ? [-1, -1] : [l:line, l:col]
+    return (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions)) ? [-1, -1] : [l:lnum, l:col]
 endfunction
 
 
@@ -19,13 +23,18 @@ endfunction
 " {start_position}.
 function! pear_tree#buffer#ReverseSearch(string, start_position, ...) abort
     let l:skip_regions = a:0 ? a:1 : []
-    let l:line = a:start_position[0]
-    let l:col = strridx(getline(l:line), a:string, a:start_position[1])
-    while l:line > 1 && (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions))
-        let l:line = l:line - 1
-        let l:col = strridx(getline(l:line), a:string)
+    let l:lnum = a:start_position[0]
+    let l:line = getline(l:lnum)
+    let l:col = strridx(l:line, a:string, a:start_position[1])
+    while l:lnum > 1 && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
+        if l:col == -1
+            let l:lnum = l:lnum - 1
+            let l:line = getline(l:lnum)
+            let l:col = strlen(l:line)
+        endif
+        let l:col = strridx(l:line, a:string, l:col - 1)
     endwhile
-    return (l:col == -1 || s:ShouldSkip([l:line, l:col + 1], l:skip_regions)) ? [-1, -1] : [l:line, l:col]
+    return (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions)) ? [-1, -1] : [l:lnum, l:col]
 endfunction
 
 
