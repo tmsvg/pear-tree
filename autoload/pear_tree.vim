@@ -24,15 +24,20 @@ function! pear_tree#GenerateDelimiter(opener, wildcard, position) abort
                 \ || index(pear_tree#GetRule(a:opener, 'not_if'), a:wildcard) > -1
         return ''
     endif
-    let l:index = 0
-    if a:wildcard !=# ''
-        let l:index = match(a:wildcard, pear_tree#GetRule(a:opener, 'until'))
+    let l:delim = pear_tree#GetRule(a:opener, 'delimiter')
+    if a:wildcard ==# ''
+        return l:delim
+    endif
+    let l:until = pear_tree#GetRule(a:opener, 'until')
+    if l:until ==# ''
+        let l:index = strlen(a:wildcard)
+    else
+        let l:index = match(a:wildcard, l:until)
         if l:index == 0
             return ''
         endif
-        let l:index = max([-1, l:index - 1])
     endif
-    let l:delim = pear_tree#GetRule(a:opener, 'delimiter')
+    let l:index = max([-1, l:index - 1])
     " Replace unescaped * chars with the wildcard string.
     return pear_tree#string#Encode(l:delim, '*', a:wildcard[:(l:index)])
 endfunction
@@ -119,7 +124,7 @@ endfunction
 
 function! pear_tree#OnPressDelimiter(char) abort
     if pear_tree#cursor#CharAfter() ==# a:char
-        return s:RIGHT
+        return "\<Del>" . a:char
     elseif pear_tree#IsDumbPair(a:char)
         return a:char . pear_tree#HandleSimplePair(a:char)
     else
