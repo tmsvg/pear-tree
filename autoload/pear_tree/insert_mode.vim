@@ -3,6 +3,11 @@ function! pear_tree#insert_mode#GetTraverser() abort
 endfunction
 
 
+function! pear_tree#insert_mode#Ignore(num) abort
+    let s:ignore = a:num
+endfunction
+
+
 function! pear_tree#insert_mode#Prepare() abort
     let l:trie = pear_tree#trie#New()
     for l:opener in keys(pear_tree#Pairs())
@@ -11,12 +16,20 @@ function! pear_tree#insert_mode#Prepare() abort
     let s:traverser = pear_tree#trie#Traverser(l:trie)
     let s:current_line = line('.')
     let s:current_column = col('.')
+    let s:ignore = 0
 endfunction
 
 
 function! pear_tree#insert_mode#HandleKeypress() abort
     let s:current_column = col('.') + 1
-    call s:traverser.StepOrReset(v:char)
+    if !s:ignore
+        call s:traverser.StepOrReset(v:char)
+    else
+        if s:traverser.AtWildcard()
+            let s:traverser.wildcard_string .= v:char
+        endif
+        let s:ignore = s:ignore - 1
+    endif
 endfunction
 
 
