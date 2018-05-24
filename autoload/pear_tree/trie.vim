@@ -288,13 +288,13 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:end_of_wildcard = pear_tree#buffer#MinPosition(l:positions)
                 let l:end_of_wildcard[1] = l:end_of_wildcard[1] - 1
                 if l:end_of_wildcard[0] == l:pos[0]
-                    let l:self.wildcard_string .= l:line[l:pos[1] + 1:l:end_of_wildcard[1]]
+                    let l:self.wildcard_string .= l:line[(l:pos[1] + 1):(l:end_of_wildcard[1])]
                 else
-                    let l:self.wildcard_string .= l:line[l:pos[1] + 1:]
+                    let l:self.wildcard_string .= l:line[(l:pos[1] + 1):]
                     for l:line in getline(l:pos[0] + 1, l:end_of_wildcard[0] - 1)
                         let l:self.wildcard_string .= l:line
                     endfor
-                    let l:self.wildcard_string .= getline(l:end_of_wildcard[0])[:l:end_of_wildcard[1]]
+                    let l:self.wildcard_string .= getline(l:end_of_wildcard[0])[:(l:end_of_wildcard[1])]
                 endif
                 let l:pos = l:end_of_wildcard
                 let l:pos[1] = l:pos[1] + 1

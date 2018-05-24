@@ -1,5 +1,5 @@
 function! s:ShouldSkip(position, skip_list)
-    return a:skip_list != [] && index(a:skip_list, pear_tree#buffer#SyntaxRegion(a:position)) > -1
+    return a:skip_list != [] && pear_tree#buffer#SyntaxRegion(a:position) =~? join(a:skip_list, '\|')
 endfunction
 
 " Search through the buffer for {string} beginning at {start_position}.
@@ -69,5 +69,5 @@ endfunction
 
 
 function! pear_tree#buffer#SyntaxRegion(position) abort
-    return synIDattr(synIDtrans(synID(a:position[0], a:position[1], 1)), 'name')
+    return synIDattr(synID(a:position[0], a:position[1], 1), 'name')
 endfunction

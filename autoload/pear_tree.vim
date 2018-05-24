@@ -20,8 +20,10 @@ function! pear_tree#GenerateDelimiter(opener, wildcard, position) abort
         return ''
     endif
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-    if index(l:not_in, pear_tree#buffer#SyntaxRegion(a:position)) > -1
-                \ || index(pear_tree#GetRule(a:opener, 'not_if'), a:wildcard) > -1
+    if (a:position[0] > 0 && l:not_in != []
+                \ && pear_tree#buffer#SyntaxRegion(a:position) =~? join(l:not_in, '\|'))
+        return ''
+    elseif index(pear_tree#GetRule(a:opener, 'not_if'), a:wildcard) > -1
         return ''
     endif
     let l:delim = pear_tree#GetRule(a:opener, 'delimiter')
@@ -151,7 +153,7 @@ function! pear_tree#TerminateOpener(char) abort
         endif
     elseif l:traverser.StepToChild(a:char) && l:traverser.AtEndOfString()
         let l:not_in = pear_tree#GetRule(l:traverser.GetString(), 'not_in')
-        if index(l:not_in, pear_tree#cursor#SyntaxRegion()) > -1
+        if pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
             call pear_tree#insert_mode#Ignore(1)
         endif
         return a:char . pear_tree#HandleComplexPair(l:traverser.GetString(), l:traverser.GetWildcardString())
@@ -169,7 +171,7 @@ endfunction
 " {skip_count} openers. This can be used to see if the delimiter at {start}
 " would be balanced if the previous {skip_count} openers were deleted.
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
-    let l:stack = a:0 ? repeat([0], a:1) : []
+    let l:count = a:0 ? a:1 : 0
 
     if a:wildcard !=# ''
         " Generate a hint to find openers faster when the pair contains a
@@ -195,14 +197,16 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
             if a:wildcard ==# ''
                 let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_pos, l:not_in)
             else
-                " Find the opener hint and ensure it points to a valid opener.
+                " Search for the opener hint and ensure it is a valid opener.
                 let l:search_pos = [l:current_pos[0], l:current_pos[1]]
                 while l:search_pos[0] > -1
-                    let l:search_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:search_pos, l:not_in)
-                    let l:end_pos = pear_tree#buffer#Search(a:opener[-1:], l:search_pos, l:not_in)
                     call l:traverser.Reset()
-                    if l:traverser.WeakTraverseBuffer(l:search_pos, l:end_pos)[0] != -1
-                                \ && pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString(), l:search_pos) ==# l:delim
+                    " Don't worry about `not_in` regions for the search. The
+                    " traverser will handle them.
+                    let l:search_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:search_pos)
+                    let l:end_pos = l:traverser.WeakTraverseBuffer(l:search_pos, l:opener_pos)
+                    if l:end_pos[0] != -1
+                                \ && pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:delim
                         break
                     endif
                     let l:search_pos[1] = l:search_pos[1] - 1
@@ -215,12 +219,12 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         endif
         if l:delim_pos[0] != -1
                     \ && pear_tree#buffer#ComparePositions(l:delim_pos, l:opener_pos) >= 0
-                    \ && !(l:stack != [] && pear_tree#IsDumbPair(l:delim))
-            call add(l:stack, 0)
+                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:delim))
+            let l:count = l:count + 1
             let l:current_pos = [l:delim_pos[0], l:delim_pos[1] - 1]
-        elseif l:opener_pos[0] != -1 && l:stack != []
-            call remove(l:stack, -1)
-            if l:stack == []
+        elseif l:opener_pos[0] != -1 && l:count != 0
+            let l:count = l:count - 1
+            if l:count == 0
                 return a:wildcard ==# '' ? [l:opener_pos[0], l:opener_pos[1] + strlen(l:opener_hint) - 1]
                                        \ : l:end_pos
             endif

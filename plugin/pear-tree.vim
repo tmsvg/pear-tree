@@ -61,30 +61,36 @@ endfunction
 
 
 function! s:MapPairs()
-    for [l:opener, l:delimiter] in items(pear_tree#Pairs())
+    for l:opener in keys(pear_tree#Pairs())
+        let l:delim = pear_tree#GetRule(l:opener, 'delimiter')
         let l:opener = l:opener[-1:]
-        let l:delimiter = get(l:delimiter, 'delimiter')
 
         let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
-        execute 'inoremap <silent> <expr> <buffer> ' . l:opener . ' pear_tree#TerminateOpener(''' . l:escaped_opener . ''')'
+        execute 'inoremap <silent> <expr> <buffer> '
+                    \ . l:opener
+                    \ . ' pear_tree#TerminateOpener('''
+                    \ . l:escaped_opener . ''')'
 
-        if strlen(l:delimiter) == 1 && !has_key(pear_tree#Pairs(), l:delimiter)
-            let l:escaped_delimiter = substitute(l:delimiter, "'", "''", 'g')
-            execute 'inoremap <silent> <expr> <buffer> ' . l:delimiter . ' pear_tree#OnPressDelimiter(''' . l:escaped_delimiter . ''')'
+        if strlen(l:delim) == 1 && !has_key(pear_tree#Pairs(), l:delim)
+            let l:escaped_delim = substitute(l:delim, "'", "''", 'g')
+            execute 'inoremap <silent> <expr> <buffer> '
+                        \ . l:delim
+                        \ . ' pear_tree#OnPressDelimiter('''
+                        \ . l:escaped_delim . ''')'
         endif
     endfor
 endfunction
 
 
 function! s:UnmapPairs()
-    for [l:opener, l:delimiter] in items(pear_tree#Pairs())
+    for l:opener in keys(pear_tree#Pairs())
+        let l:delim = pear_tree#GetRule(l:opener, 'delimiter')
         let l:opener = l:opener[-1:]
+
         if maparg(l:opener, 'i') =~# '^pear_tree#'
             execute 'silent! iunmap <buffer> ' . l:opener
         endif
-
-        let l:delimiter = get(l:delimiter, 'delimiter')
-        if maparg(l:delimiter, 'i') =~# '^pear_tree#'
+        if maparg(l:delim, 'i') =~# '^pear_tree#'
             execute 'silent! iunmap <buffer> ' . l:opener
         endif
     endfor
