@@ -37,7 +37,6 @@ function! s:BufferEnable()
     else
         call s:MapDefaults()
     endif
-    call pear_tree#insert_mode#Prepare()
     let b:pear_tree_enabled = 1
 endfunction
 
@@ -68,14 +67,14 @@ function! s:MapPairs()
         let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
         execute 'inoremap <silent> <expr> <buffer> '
                     \ . l:opener
-                    \ . ' pear_tree#TerminateOpener('''
+                    \ . ' pear_tree#insert_mode#TerminateOpener('''
                     \ . l:escaped_opener . ''')'
 
         if strlen(l:delim) == 1 && !has_key(pear_tree#Pairs(), l:delim)
             let l:escaped_delim = substitute(l:delim, "'", "''", 'g')
             execute 'inoremap <silent> <expr> <buffer> '
                         \ . l:delim
-                        \ . ' pear_tree#HandleDelimiter('''
+                        \ . ' pear_tree#insert_mode#HandleDelimiter('''
                         \ . l:escaped_delim . ''')'
         endif
     endfor
@@ -128,6 +127,10 @@ augroup pear_tree
     autocmd BufRead,BufNewFile *
                 \ if (index(g:pear_tree_ft_disabled, &filetype) == -1) |
                 \       call <SID>BufferEnable() |
+                \ endif
+    autocmd InsertEnter *
+                \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
+                \       call pear_tree#insert_mode#Prepare() |
                 \ endif
     autocmd CursorMovedI,InsertEnter *
                 \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
