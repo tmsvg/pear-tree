@@ -3,12 +3,12 @@ function! pear_tree#cursor#Position()
 endfunction
 
 
-function! pear_tree#cursor#CharBefore() abort
+function! pear_tree#cursor#PrevChar() abort
     return matchstr(getline('.'), '\%' . (col('.') - 1) . 'c.')
 endfunction
 
 
-function! pear_tree#cursor#CharAfter() abort
+function! pear_tree#cursor#NextChar() abort
     return matchstr(getline('.'), '\%' . col('.') . 'c.')
 endfunction
 
@@ -20,11 +20,6 @@ endfunction
 
 function! pear_tree#cursor#TextAfter()
     return getline('.')[(col('.') - 1):]
-endfunction
-
-
-function! pear_tree#cursor#StringAfter() abort
-    return matchstr(getline('.')[(col('.') - 1):], '^\S*')
 endfunction
 
 

@@ -45,17 +45,6 @@ function! pear_tree#GenerateDelimiter(opener, wildcard, position) abort
 endfunction
 
 
-function! pear_tree#IsClosingBracket(char) abort
-    for l:delim_dict in values(pear_tree#Pairs())
-        let l:delim = get(l:delim_dict, 'delimiter')
-        if a:char ==# l:delim
-            return !has_key(pear_tree#Pairs(), l:delim)
-        endif
-    endfor
-    return 0
-endfunction
-
-
 function! pear_tree#IsDumbPair(char) abort
     return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'delimiter') ==# a:char
 endfunction
@@ -72,24 +61,45 @@ function! pear_tree#GetRule(opener, rule) abort
 endfunction
 
 
-function! pear_tree#HandleSimplePair(char) abort
-    let l:char_after_cursor = pear_tree#cursor#CharAfter()
-    let l:char_before_cursor = pear_tree#cursor#CharBefore()
-    " Define situations in which Pear Tree is permitted to match.
-    " If the cursor is any of the following:
-    "   1. On an empty line
-    "   2. At end of line and not placing dumb pair directly after a word
-    "   3. Followed by whitespace and not placing dumb pair directly after a word
-    "   4. Before a bracket-type character and not placing dumb pair directly after a word
-    "   5. Between opening and closing pair
-    " then we may match the entered character.
-    if pear_tree#cursor#OnEmptyLine()
-                \ || (!(pear_tree#IsDumbPair(a:char) && l:char_before_cursor =~# '\w')
-                    \ && (pear_tree#cursor#AtEndOfLine()
-                        \ || l:char_after_cursor =~# '\s'
-                        \ || pear_tree#IsClosingBracket(l:char_after_cursor)))
-                \ || (has_key(pear_tree#Pairs(), l:char_before_cursor)
-                    \ && pear_tree#GetRule(l:char_before_cursor, 'delimiter') ==# l:char_after_cursor)
+" Define situations in which Pear Tree should close a simple opener.
+function! s:ShouldCloseSimpleOpener(char) abort
+    let l:delim = pear_tree#GetRule(a:char, 'delimiter')
+    let l:next_char = pear_tree#cursor#NextChar()
+    let l:prev_char = pear_tree#cursor#PrevChar()
+    let l:is_dumb = pear_tree#IsDumbPair(a:char)
+
+    if l:next_char =~# '\w' || (l:is_dumb && l:prev_char =~# '\w')
+        return 0
+    elseif !l:is_dumb && get(g:, 'pear_tree_smart_insert', get(b:, 'pear_tree_smart_insert', 0))
+        " Get the first delimiter after the cursor not preceded by an opener.
+        let l:not_in = pear_tree#GetRule(a:char, 'not_in')
+        let l:opener_pos = pear_tree#buffer#Search(a:char, pear_tree#cursor#Position(), l:not_in)
+        let l:delim_pos = pear_tree#buffer#Search(l:delim, pear_tree#cursor#Position(), l:not_in)
+        while pear_tree#buffer#ComparePositions(l:opener_pos, l:delim_pos) < 0
+                    \ && l:opener_pos != [-1, -1]
+            let l:opener_pos[1] += 1
+            let l:delim_pos[1] += 1
+            let l:opener_pos = pear_tree#buffer#Search(a:char, l:opener_pos, l:not_in)
+            let l:delim_pos = pear_tree#buffer#Search(l:delim, l:delim_pos, l:not_in)
+        endwhile
+        let l:delim_pos = pear_tree#buffer#ReverseSearch(l:delim, l:opener_pos, l:not_in)
+        return l:delim_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:delim_pos) != [-1, -1]
+    elseif pear_tree#cursor#OnEmptyLine()
+                \ || pear_tree#cursor#AtEndOfLine()
+                \ || l:next_char =~# '\s'
+                \ || l:next_char ==# l:delim
+        return 1
+    elseif has_key(pear_tree#Pairs(), l:prev_char)
+                \ && pear_tree#GetRule(l:prev_char, 'delimiter') ==# l:next_char
+        return 1
+    else
+        return 0
+    endif
+endfunction
+
+
+function! pear_tree#CloseSimpleOpener(char) abort
+    if s:ShouldCloseSimpleOpener(a:char)
         let l:delim = pear_tree#GenerateDelimiter(a:char, '', pear_tree#cursor#Position())
         return l:delim . repeat(s:LEFT, pear_tree#string#VisualLength(l:delim))
     else
@@ -98,25 +108,35 @@ function! pear_tree#HandleSimplePair(char) abort
 endfunction
 
 
-function! pear_tree#HandleComplexPair(opener, wildcard) abort
-    " Define situations in which Pear Tree is permitted to match.
-    " First, the wildcard string can span multiple lines, but the opener
-    " should not be terminated when the terminating character is the only
-    " character on the line. For example,
-    "           <div
-    "             class='foo'>|
-    " should match, but
-    "           <div
-    "             class='foo'
-    "           >|
-    " should not match.
-    " If it is the first case, the cursor should also be at the end of the
-    " line, before whitespace, or between another pair.
-    if strlen(pear_tree#string#Trim(pear_tree#cursor#TextBefore())) > 0
-                \ && (pear_tree#cursor#AtEndOfLine()
-                    \ || pear_tree#cursor#CharAfter() =~# '\s'
-                    \ || has_key(pear_tree#Pairs(), pear_tree#cursor#CharAfter())
-                    \ || pear_tree#GetSurroundingPair() != [])
+" Define situations in which Pear Tree should close a complex opener.
+" First, the wildcard string can span multiple lines, but the opener
+" should not be terminated when the terminating character is the only
+" character on the line. For example,
+"           <div
+"             class='foo'>|
+" should match, but
+"           <div
+"             class='foo'
+"           >|
+" should not match.
+" If it is the first case, the cursor should also be at the end of the
+" line, before whitespace, or between another pair.
+function! s:ShouldCloseComplexOpener() abort
+    if strlen(pear_tree#string#Trim(pear_tree#cursor#TextBefore())) == 0
+        return 0
+    elseif pear_tree#cursor#AtEndOfLine()
+                \ || pear_tree#cursor#NextChar() =~# '\s'
+                \ || has_key(pear_tree#Pairs(), pear_tree#cursor#NextChar())
+                \ || pear_tree#GetSurroundingPair() != []
+        return 1
+    else
+        return 0
+    endif
+endfunction
+
+
+function! pear_tree#CloseComplexOpener(opener, wildcard) abort
+    if s:ShouldCloseComplexOpener()
         let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard, pear_tree#cursor#Position())
         return l:delim . repeat(s:LEFT, pear_tree#string#VisualLength(l:delim))
     else
@@ -125,11 +145,11 @@ function! pear_tree#HandleComplexPair(opener, wildcard) abort
 endfunction
 
 
-function! pear_tree#OnPressDelimiter(char) abort
-    if pear_tree#cursor#CharAfter() ==# a:char
+function! pear_tree#HandleDelimiter(char) abort
+    if pear_tree#cursor#NextChar() ==# a:char
         return "\<Del>" . a:char
     elseif pear_tree#IsDumbPair(a:char)
-        return a:char . pear_tree#HandleSimplePair(a:char)
+        return a:char . pear_tree#CloseSimpleOpener(a:char)
     else
         return a:char
     endif
@@ -147,16 +167,16 @@ function! pear_tree#TerminateOpener(char) abort
                     \ || !l:traverser.GetCurrent().HasChild(a:char)
                     \ )
         if pear_tree#IsDumbPair(a:char)
-            return pear_tree#OnPressDelimiter(a:char)
+            return pear_tree#HandleDelimiter(a:char)
         else
-            return a:char . pear_tree#HandleSimplePair(a:char)
+            return a:char . pear_tree#CloseSimpleOpener(a:char)
         endif
     elseif l:traverser.StepToChild(a:char) && l:traverser.AtEndOfString()
         let l:not_in = pear_tree#GetRule(l:traverser.GetString(), 'not_in')
         if pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
             call pear_tree#insert_mode#Ignore(1)
         endif
-        return a:char . pear_tree#HandleComplexPair(l:traverser.GetString(), l:traverser.GetWildcardString())
+        return a:char . pear_tree#CloseComplexOpener(l:traverser.GetString(), l:traverser.GetWildcardString())
     else
         return a:char
     endif
@@ -264,11 +284,11 @@ endfunction
 
 
 function! pear_tree#Backspace() abort
-    let l:char_before_cursor = pear_tree#cursor#CharBefore()
+    let l:char_before_cursor = pear_tree#cursor#PrevChar()
     if !has_key(pear_tree#Pairs(), l:char_before_cursor)
         return "\<BS>"
     endif
-    let l:char_after_cursor = pear_tree#cursor#CharAfter()
+    let l:char_after_cursor = pear_tree#cursor#NextChar()
 
     if pear_tree#GetRule(l:char_before_cursor, 'delimiter') !=# l:char_after_cursor
         let l:should_delete_both = 0

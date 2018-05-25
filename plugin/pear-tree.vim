@@ -75,7 +75,7 @@ function! s:MapPairs()
             let l:escaped_delim = substitute(l:delim, "'", "''", 'g')
             execute 'inoremap <silent> <expr> <buffer> '
                         \ . l:delim
-                        \ . ' pear_tree#OnPressDelimiter('''
+                        \ . ' pear_tree#HandleDelimiter('''
                         \ . l:escaped_delim . ''')'
         endif
     endfor
@@ -131,11 +131,11 @@ augroup pear_tree
                 \ endif
     autocmd CursorMovedI,InsertEnter *
                 \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
-                \       call pear_tree#insert_mode#CursorMoved() |
+                \       call pear_tree#insert_mode#OnCursorMovedI() |
                 \ endif
     autocmd InsertCharPre *
                 \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
-                \       call pear_tree#insert_mode#HandleKeypress() |
+                \       call pear_tree#insert_mode#OnInsertCharPre() |
                 \ endif
 augroup END
 

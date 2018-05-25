@@ -20,7 +20,7 @@ function! pear_tree#insert_mode#Prepare() abort
 endfunction
 
 
-function! pear_tree#insert_mode#HandleKeypress() abort
+function! pear_tree#insert_mode#OnInsertCharPre() abort
     let s:current_column = col('.') + 1
     if !s:ignore
         call s:traverser.StepOrReset(v:char)
@@ -33,7 +33,7 @@ function! pear_tree#insert_mode#HandleKeypress() abort
 endfunction
 
 
-function! pear_tree#insert_mode#CursorMoved() abort
+function! pear_tree#insert_mode#OnCursorMovedI() abort
     let l:new_line = line('.')
     let l:new_col = col('.')
     if l:new_line != s:current_line || l:new_col < s:current_column
