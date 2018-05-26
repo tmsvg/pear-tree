@@ -16,10 +16,7 @@ let s:strings_to_expand = []
 
 
 function! pear_tree#PairTrie()
-    let l:trie = pear_tree#trie#New()
-    for l:opener in keys(pear_tree#Pairs())
-        call l:trie.Insert(l:opener)
-    endfor
+    let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
     return l:trie
 endfunction
 
@@ -147,10 +144,8 @@ endfunction
 " Return the opener and delimiter that surround the cursor, as well as the
 " wildcard string and the position of the opener.
 function! pear_tree#GetSurroundingPair() abort
-    let l:delim_trie = pear_tree#trie#New()
-    for l:opener in keys(pear_tree#Pairs())
-        call l:delim_trie.Insert(pear_tree#GetRule(l:opener, 'delimiter'))
-    endfor
+    let l:delims = map(keys(pear_tree#Pairs()), 'pear_tree#GetRule(v:val, ''delimiter'')')
+    let l:delim_trie = pear_tree#trie#New(l:delims)
     let l:delim_traverser = pear_tree#trie#Traverser(l:delim_trie)
     let l:start = l:delim_traverser.WeakTraverseBuffer([line('.'), col('.') - 1], pear_tree#buffer#End())
     if l:start[0] == -1

@@ -1,65 +1,75 @@
-function! pear_tree#trie#New() abort
-    let l:obj = {'root': pear_tree#trie#Node(''),
-               \ 'leaves': [],
-               \ 'wildcard_symbol': 'wc'}
+let s:wildcard_symbol = 'wc'
 
-    function! l:obj.Insert(str) abort
-        let l:current = l:self.root
-        for l:ch in pear_tree#string#Tokenize(a:str, '*', l:self.wildcard_symbol)
-            if !has_key(l:current.children, l:ch)
-                let l:node = pear_tree#trie#Node(l:ch)
-                let l:current.children[l:ch] = l:node
-                let l:node.parent = l:current
-            else
-                let l:node = get(l:current.children, l:ch)
-            endif
-            let l:current = l:node
-        endfor
-        call add(l:self.leaves, l:current)
-        let l:current.is_end_of_string = 1
-    endfunction
 
-    function! l:obj.GetStrings() abort
-        let l:strings = []
-        for l:node in l:self.leaves
-            call add(l:strings, l:self.GetStringAtNode(l:node))
-        endfor
-        return l:strings
-    endfunction
-
-    function! l:obj.GetStringAtNode(node) abort
-        let l:string = []
-        let l:current = a:node
-        while l:current != l:self.root
-            let l:string = add(l:string, l:current.char)
-            let l:current = l:current.parent
-        endwhile
-        return pear_tree#string#Decode(join(reverse(l:string), ''), '*', l:self.wildcard_symbol)
-    endfunction
-
-    return l:obj
+function! s:TrieNode(char) abort
+    return {'char': a:char,
+          \ 'children': {},
+          \ 'parent': {},
+          \ 'is_end_of_string': 0}
 endfunction
 
 
-function! pear_tree#trie#Node(char) abort
-    let l:obj = {'char': a:char,
-               \ 'children': {},
-               \ 'parent': {},
-               \ 'is_end_of_string': 0}
+function! pear_tree#trie#New(...) abort
+    let l:trie = {'root': s:TrieNode(''),
+                \ 'leaves': []}
+    if a:0 == 0
+        return l:trie
+    elseif type(a:1) == type([])
+        for l:str in a:1
+            call pear_tree#trie#Insert(l:trie, l:str)
+        endfor
+    elseif type(a:1) == type('')
+        call pear_tree#trie#Insert(l:trie, l:str)
+    endif
+    return l:trie
+endfunction
 
-    function! l:obj.HasChild(char) abort
-        return has_key(l:self.children, a:char)
-    endfunction
 
-    function! l:obj.GetChild(char) abort
-        return get(l:self.children, a:char, {})
-    endfunction
+function! pear_tree#trie#Insert(trie, str) abort
+    let l:current = a:trie.root
+    for l:ch in pear_tree#string#Tokenize(a:str, '*', s:wildcard_symbol)
+        if !has_key(l:current.children, l:ch)
+            let l:node = s:TrieNode(l:ch)
+            let l:current.children[l:ch] = l:node
+            let l:node.parent = l:current
+        else
+            let l:node = get(l:current.children, l:ch)
+        endif
+        let l:current = l:node
+    endfor
+    call add(a:trie.leaves, l:current)
+    let l:current.is_end_of_string = 1
+    return a:trie
+endfunction
 
-    function! l:obj.GetChildren() abort
-        return l:self.children
-    endfunction
 
-    return l:obj
+function! pear_tree#trie#Strings(trie) abort
+    let l:strings = []
+    for l:node in a:trie.leaves
+        call add(l:strings, pear_tree#trie#Prefix(a:trie, l:node))
+    endfor
+    return l:strings
+endfunction
+
+
+function! pear_tree#trie#Prefix(trie, node) abort
+    let l:string = []
+    let l:current = a:node
+    while l:current != a:trie.root
+        let l:string = add(l:string, l:current.char)
+        let l:current = l:current.parent
+    endwhile
+    return pear_tree#string#Decode(join(reverse(l:string), ''), '*', s:wildcard_symbol)
+endfunction
+
+
+function! pear_tree#trie#GetChild(trie_node, char)
+    return get(a:trie_node.children, a:char, {})
+endfunction
+
+
+function! pear_tree#trie#HasChild(trie_node, char)
+    return has_key(a:trie_node.children, a:char)
 endfunction
 
 
@@ -71,17 +81,15 @@ function! pear_tree#trie#Traverser(trie) abort
                \ 'wildcard_string': ''}
 
     function! l:obj.StepToChild(char) abort
-        let l:node = l:self.current.GetChild(a:char)
-        let l:wildcard_node = l:self.current.GetChild(l:self.trie.wildcard_symbol)
         " Try stepping to the node containing a:char.
-        if l:node != {}
-            let l:self.current = l:node
+        if pear_tree#trie#HasChild(l:self.current, a:char)
+            let l:self.current = pear_tree#trie#GetChild(l:self.current, a:char)
             let l:self.string = l:self.string . a:char
             return 1
         " Try stepping to a wildcard node.
-        elseif l:wildcard_node != {}
-            let l:self.current = l:wildcard_node
-            let l:self.string = l:self.string . l:self.trie.wildcard_symbol
+        elseif pear_tree#trie#HasChild(l:self.current, s:wildcard_symbol)
+            let l:self.current = pear_tree#trie#GetChild(l:self.current, s:wildcard_symbol)
+            let l:self.string = l:self.string . s:wildcard_symbol
             let l:self.wildcard_string = l:self.wildcard_string . a:char
             return 1
         elseif l:self.AtWildcard()
@@ -89,10 +97,10 @@ function! pear_tree#trie#Traverser(trie) abort
             return 1
         " Reached dead end. Attempt to go back to a wildcard node.
         else
-            let l:node = l:self.Backtrack(l:self.trie.wildcard_symbol)
+            let l:node = l:self.Backtrack(s:wildcard_symbol)
             if l:node != {}
                 let l:self.current = l:node
-                let l:new_string = l:self.trie.GetStringAtNode(l:self.current)
+                let l:new_string = pear_tree#trie#Prefix(l:self.trie, l:self.current)
                 let l:self.wildcard_string = l:self.string[(strlen(l:new_string) - 1):]
                 let l:self.string = l:new_string
                 return l:self.StepToChild(a:char)
@@ -123,7 +131,7 @@ function! pear_tree#trie#Traverser(trie) abort
         " character of the string. Unnecessary resets can be avoided by
         " starting at the smallest of these indices.
         let l:min_idx = a:end
-        for l:str in l:self.trie.GetStrings()
+        for l:str in pear_tree#trie#Strings(l:self.trie)
             if strlen(l:str) == 1
                 continue
             endif
@@ -132,6 +140,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:min_idx = l:idx
             endif
         endfor
+        let l:grandparents = filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}')
         let l:i = l:min_idx
         while l:i < a:end
             call l:self.StepOrReset(a:text[(l:i)])
@@ -141,7 +150,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
-                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}'), l:i)
+                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, l:grandparents, l:i)
                 let l:i = max([l:i + 1, min(l:indices)])
             else
                 let l:i = l:i + 1
@@ -193,7 +202,7 @@ function! pear_tree#trie#Traverser(trie) abort
         " starting at the smallest of these indices.
         let l:min_pos = copy(a:end_pos)
         let l:min_not_in = []
-        for l:str in l:self.trie.GetStrings()
+        for l:str in pear_tree#trie#Strings(l:self.trie)
             if strlen(l:str) == 1
                 continue
             endif
@@ -211,6 +220,7 @@ function! pear_tree#trie#Traverser(trie) abort
         endfor
         let l:pos = l:min_pos
         let l:not_in = l:min_not_in
+        let l:grandparents = filter(keys(l:self.root.children), 'pear_tree#trie#GetChild(l:self.root, v:val).children != {}')
         while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
             let l:line = getline(l:pos[0])
             call l:self.StepOrReset(l:line[(l:pos[1])])
@@ -238,7 +248,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:pos[1] = l:pos[1] + 1
             elseif l:self.AtRoot()
                 let l:positions = [a:end_pos]
-                for l:char in filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}')
+                for l:char in l:grandparents
                     let l:search_pos = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
                     if l:search_pos != [-1, -1]
                         call add(l:positions, l:search_pos)
@@ -274,7 +284,7 @@ function! pear_tree#trie#Traverser(trie) abort
             if l:self.AtWildcard()
                 let l:positions = [a:end_pos]
                 for l:char in keys(l:self.current.children)
-                    let l:str = l:self.trie.GetStringAtNode(l:self.current.GetChild(l:char))
+                    let l:str = pear_tree#trie#Prefix(l:self.trie, pear_tree#trie#GetChild(l:self.current, l:char))
                     if has_key(pear_tree#Pairs(), l:str)
                         let l:not_in = pear_tree#GetRule(l:str, 'not_in')
                     else
@@ -322,7 +332,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 return {}
             endif
         endwhile
-        return get(l:node.children, a:char)
+        return pear_tree#trie#GetChild(l:node, a:char)
     endfunction
 
     function! l:obj.Reset() abort
@@ -336,27 +346,15 @@ function! pear_tree#trie#Traverser(trie) abort
     endfunction
 
     function! l:obj.AtWildcard() abort
-        return l:self.current.char ==# l:self.trie.wildcard_symbol
+        return l:self.current.char ==# s:wildcard_symbol
     endfunction
 
     function! l:obj.AtRoot() abort
         return l:self.current == l:self.root
     endfunction
 
-    function! l:obj.GetChar() abort
-        return l:self.current.char
-    endfunction
-
     function! l:obj.GetString() abort
-        return pear_tree#string#Decode(l:self.string, '*', l:self.trie.wildcard_symbol)
-    endfunction
-
-    function! l:obj.GetRoot() abort
-        return l:self.root
-    endfunction
-
-    function! l:obj.GetParent() abort
-        return l:self.current.parent
+        return pear_tree#string#Decode(l:self.string, '*', s:wildcard_symbol)
     endfunction
 
     function! l:obj.GetCurrent() abort
@@ -369,4 +367,3 @@ function! pear_tree#trie#Traverser(trie) abort
 
     return l:obj
 endfunction
-

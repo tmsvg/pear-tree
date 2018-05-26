@@ -150,7 +150,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     if has_key(pear_tree#Pairs(), a:char)
                 \ && (s:traverser.GetString() ==# ''
                     \ || s:traverser.AtWildcard()
-                    \ || !s:traverser.GetCurrent().HasChild(a:char)
+                    \ || !pear_tree#trie#HasChild(s:traverser.GetCurrent(), a:char)
                     \ )
         if pear_tree#IsDumbPair(a:char)
             return pear_tree#insert_mode#HandleDelimiter(a:char)
@@ -160,10 +160,11 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     elseif s:traverser.StepToChild(a:char) && s:traverser.AtEndOfString()
         let l:not_in = pear_tree#GetRule(s:traverser.GetString(), 'not_in')
         if pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
-            let s:ignore = 1
+            let s:ignore = s:ignore + 1
         endif
         return a:char . pear_tree#insert_mode#CloseComplexOpener(s:traverser.GetString(), s:traverser.GetWildcardString())
     else
+        let s:ignore = s:ignore + 1
         return a:char
     endif
 endfunction
