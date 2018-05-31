@@ -1,4 +1,4 @@
-function! pear_tree#cursor#Position()
+function! pear_tree#cursor#Position() abort
     return [line('.'), col('.')]
 endfunction
 
@@ -13,12 +13,12 @@ function! pear_tree#cursor#NextChar() abort
 endfunction
 
 
-function! pear_tree#cursor#TextBefore()
+function! pear_tree#cursor#TextBefore() abort
     return getline('.')[:(col('.') - 2)]
 endfunction
 
 
-function! pear_tree#cursor#TextAfter()
+function! pear_tree#cursor#TextAfter() abort
     return getline('.')[(col('.') - 1):]
 endfunction
 

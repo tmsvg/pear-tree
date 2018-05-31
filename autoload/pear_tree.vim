@@ -15,12 +15,6 @@ endif
 let s:strings_to_expand = []
 
 
-function! pear_tree#PairTrie()
-    let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
-    return l:trie
-endfunction
-
-
 function! pear_tree#Pairs() abort
     return get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
 endfunction
@@ -68,6 +62,80 @@ endfunction
 
 
 " Check if {opener} is balanced in the buffer. If it is, return the position
+" at which the pair was determined to be balanced. Otherwise, return [-1, -1].
+"
+" An optional argument {skip_count} tells the function to ignore the first
+" {skip_count} openers. This can be used to see if the delimiter at {start}
+" would be balanced if the previous {skip_count} openers were deleted.
+function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
+    let l:count = a:0 ? a:1 : 0
+
+    if a:wildcard !=# ''
+        " Generate a hint to find openers faster when the pair contains a
+        " wildcard. The {wildcard} is the wildcard string as it appears in the
+        " delimiter, so it may be a trimmed version of the opener's wildcard.
+        let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
+        let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
+
+        let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
+        let l:traverser = pear_tree#trie#Traverser(l:trie)
+    else
+        " Unescape asterisks
+        let l:opener_hint = pear_tree#string#Encode(a:opener, '*', '')
+    endif
+    let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard, a:start)
+
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+
+    let l:current_pos = a:start
+    let l:delim_pos = [l:current_pos[0], l:current_pos[1] + 1]
+    let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
+    while l:current_pos[0] != -1
+        " Find the previous opener and delimiter in the buffer.
+        if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) < 0
+            if a:wildcard ==# ''
+                let l:opener_pos = pear_tree#buffer#Search(a:opener, l:current_pos, l:not_in)
+            else
+                " Find the opener hint and ensure it points to a valid opener.
+                let l:search_pos = [l:current_pos[0], l:current_pos[1]]
+                while l:search_pos[0] != -1
+                    let l:search_pos = pear_tree#buffer#Search(l:opener_hint, l:search_pos)
+                    if l:search_pos == [-1, -1]
+                        break
+                    endif
+                    let l:end_pos = pear_tree#buffer#Search(a:opener[-1:], l:search_pos)
+                    call l:traverser.Reset()
+                    if l:traverser.WeakTraverseBuffer(l:search_pos, l:end_pos)[0] != -1
+                                \ && pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:delim
+                        break
+                    endif
+                    let l:search_pos[1] = l:search_pos[1] + 1
+                endwhile
+                let l:opener_pos = l:search_pos
+            endif
+        endif
+        if pear_tree#buffer#ComparePositions(l:delim_pos, l:current_pos) < 0
+            let l:delim_pos = pear_tree#buffer#Search(l:delim, l:current_pos, l:not_in)
+        endif
+        if l:opener_pos != [-1, -1]
+                    \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:delim_pos) <= 0
+                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:delim))
+            let l:count = l:count + 1
+            let l:current_pos = [l:opener_pos[0], l:opener_pos[1] + 1]
+        elseif l:delim_pos != [-1, -1] && l:count != 0
+            let l:count = l:count - 1
+            if l:count == 0
+                return l:delim_pos
+            endif
+            let l:current_pos = [l:delim_pos[0], l:delim_pos[1] + 1]
+        else
+            return [-1, -1]
+        endif
+    endwhile
+endfunction
+
+
+" Check if {opener} is balanced in the buffer. If it is, return the position
 " of the final character of the opener that balances the pair. If the pair is
 " unbalanced, return [-1, -1].
 "
@@ -83,7 +151,9 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         " delimiter, so it may be a trimmed version of the opener's wildcard.
         let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
         let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
-        let l:traverser = pear_tree#trie#Traverser(pear_tree#PairTrie())
+
+        let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
+        let l:traverser = pear_tree#trie#Traverser(l:trie)
     else
         " Unescape asterisks
         let l:opener_hint = pear_tree#string#Encode(a:opener, '*', '')

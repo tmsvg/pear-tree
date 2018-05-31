@@ -63,12 +63,12 @@ function! pear_tree#trie#Prefix(trie, node) abort
 endfunction
 
 
-function! pear_tree#trie#GetChild(trie_node, char)
+function! pear_tree#trie#GetChild(trie_node, char) abort
     return get(a:trie_node.children, a:char, {})
 endfunction
 
 
-function! pear_tree#trie#HasChild(trie_node, char)
+function! pear_tree#trie#HasChild(trie_node, char) abort
     return has_key(a:trie_node.children, a:char)
 endfunction
 
@@ -190,7 +190,7 @@ function! pear_tree#trie#Traverser(trie) abort
     " Traverse the text in the buffer from {start_pos} to {end_pos}
     " where both positions are given as a tuple of the form
     " [line_number, column_number].
-    function! l:obj.TraverseBuffer(start_pos, end_pos)
+    function! l:obj.TraverseBuffer(start_pos, end_pos) abort
         " An occurrence of the final character of a string means that any
         " time the first character of the string occurs before it, the string
         " is either complete or does not occur. In either case, the traverser

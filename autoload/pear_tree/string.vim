@@ -50,7 +50,7 @@ endfunction
 
 " Return the index of the first unescaped occurrence of {special_char} in
 " {string}, with the search starting at {start}.
-function! pear_tree#string#UnescapedStridx(string, special_char, ...)
+function! pear_tree#string#UnescapedStridx(string, special_char, ...) abort
     let l:start = a:0 ? a:1 : 0
     return index(pear_tree#string#Tokenize(a:string, a:special_char, '__'), '__', l:start)
 endfunction
@@ -72,7 +72,7 @@ endfunction
 
 " Return a list of indices representing positions within {text} at which a
 " string in the list {strings} first appears.
-function! pear_tree#string#FindAll(text, strings, start)
+function! pear_tree#string#FindAll(text, strings, start) abort
     let l:indices = []
     for l:string in a:strings
         let l:idx = stridx(a:text, l:string, a:start)

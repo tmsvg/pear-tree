@@ -24,6 +24,13 @@ if !exists('g:pear_tree_smart_backspace')
     let g:pear_tree_smart_backspace = 0
 endif
 
+if !exists('g:pear_tree_smart_insert')
+    let g:pear_tree_smart_insert = 0
+endif
+
+if !exists('g:pear_tree_smart_closers')
+    let g:pear_tree_smart_closers = 0
+endif
 
 function! s:BufferEnable()
     if exists('b:pear_tree_enabled') && b:pear_tree_enabled

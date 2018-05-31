@@ -127,8 +127,8 @@ Type: Number
 
 Default: `0`
 
-If the value is not 0, Pear Tree will attempt to maintain when typing a
-single-character opener pair balance instead of always inserting the delimiter:
+If the value is not 0, Pear Tree will attempt to maintain pair balance when
+typing a single-character opener instead of always inserting the delimiter:
 
                       |   Enabled    |   Disabled   |
         ---------------------------------------------
@@ -143,6 +143,31 @@ of parentheses balanced.
 To enable, add the following to your vimrc:
 >
     let g:pear_tree_smart_insert = 1
+<
+------------------------------------------------------------------------------
+                                                    *g:pear_tree_smart_closers*
+                                                    *b:pear_tree_smart_closers*
+Type: Number
+
+Default: `0`
+
+If the value is not 0, Pear Tree will attempt to maintain pair balance when
+typing a single-character delimiter instead of always moving the cursor past
+the following delimiter:
+
+                      |   Enabled    |   Disabled   |
+        ---------------------------------------------
+        |   Start     |  `(foo(bar|)`  |  `(foo(bar|)`  |
+        |   Type )    |  `(foo(bar)|)` |  `(foo(bar)|`  |
+        |   Result    |  `(foo(bar))`  |  `(foo(bar)`   |
+
+If enabled, Pear Tree will check if the first opening parenthesis is balanced.
+Since it is not, typing `)` inserts `)` instead of moving the cursor over the
+close parenthesis, thereby making both pairs of parentheses balanced.
+
+To enable, add the following to your vimrc:
+>
+    let g:pear_tree_smart_closers = 1
 <
 ------------------------------------------------------------------------------
                                                   *g:pear_tree_smart_backspace*

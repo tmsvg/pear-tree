@@ -1,4 +1,4 @@
-function! s:ShouldSkip(position, skip_list)
+function! s:ShouldSkip(position, skip_list) abort
     return a:skip_list != [] && pear_tree#buffer#SyntaxRegion(a:position) =~? join(a:skip_list, '\|')
 endfunction
 
