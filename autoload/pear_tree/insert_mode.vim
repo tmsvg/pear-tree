@@ -55,7 +55,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
 
     if l:next_char =~# '\w' || (l:is_dumb && l:prev_char =~# '\w')
         return 0
-    elseif !l:is_dumb && get(g:, 'pear_tree_smart_insert', get(b:, 'pear_tree_smart_insert', 0))
+    elseif !l:is_dumb && get(g:, 'pear_tree_smart_openers', get(b:, 'pear_tree_smart_openers', 0))
         if !pear_tree#cursor#OnEmptyLine()
                     \ && !pear_tree#cursor#AtEndOfLine()
                     \ && l:next_char !~# '\s'

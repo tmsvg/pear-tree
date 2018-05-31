@@ -24,8 +24,8 @@ if !exists('g:pear_tree_smart_backspace')
     let g:pear_tree_smart_backspace = 0
 endif
 
-if !exists('g:pear_tree_smart_insert')
-    let g:pear_tree_smart_insert = 0
+if !exists('g:pear_tree_smart_openers')
+    let g:pear_tree_smart_openers = 0
 endif
 
 if !exists('g:pear_tree_smart_closers')
