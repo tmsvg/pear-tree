@@ -1,5 +1,5 @@
 let s:pear_tree_default_rules = {
-            \ 'delimiter': '',
+            \ 'closer': '',
             \ 'not_in': [],
             \ 'not_if': [],
             \ 'until': '[[:punct:][:space:]]'
@@ -27,11 +27,11 @@ endfunction
 
 
 function! pear_tree#IsDumbPair(char) abort
-    return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'delimiter') ==# a:char
+    return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'closer') ==# a:char
 endfunction
 
 
-function! pear_tree#GenerateDelimiter(opener, wildcard, position) abort
+function! pear_tree#GenerateCloser(opener, wildcard, position) abort
     if !has_key(pear_tree#Pairs(), a:opener)
         return ''
     endif
@@ -42,9 +42,9 @@ function! pear_tree#GenerateDelimiter(opener, wildcard, position) abort
     elseif index(pear_tree#GetRule(a:opener, 'not_if'), a:wildcard) > -1
         return ''
     endif
-    let l:delim = pear_tree#GetRule(a:opener, 'delimiter')
+    let l:closer = pear_tree#GetRule(a:opener, 'closer')
     if a:wildcard ==# ''
-        return pear_tree#string#Encode(l:delim, '*', '')
+        return pear_tree#string#Encode(l:closer, '*', '')
     endif
     let l:until = pear_tree#GetRule(a:opener, 'until')
     if l:until ==# ''
@@ -57,7 +57,7 @@ function! pear_tree#GenerateDelimiter(opener, wildcard, position) abort
     endif
     let l:index = max([-1, l:index - 1])
     " Replace unescaped * chars with the wildcard string.
-    return pear_tree#string#Encode(l:delim, '*', a:wildcard[:(l:index)])
+    return pear_tree#string#Encode(l:closer, '*', a:wildcard[:(l:index)])
 endfunction
 
 
@@ -65,7 +65,7 @@ endfunction
 " at which the pair was determined to be balanced. Otherwise, return [-1, -1].
 "
 " An optional argument {skip_count} tells the function to ignore the first
-" {skip_count} openers. This can be used to see if the delimiter at {start}
+" {skip_count} openers. This can be used to see if the closer at {start}
 " would be balanced if the previous {skip_count} openers were deleted.
 function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
@@ -73,7 +73,7 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
     if a:wildcard !=# ''
         " Generate a hint to find openers faster when the pair contains a
         " wildcard. The {wildcard} is the wildcard string as it appears in the
-        " delimiter, so it may be a trimmed version of the opener's wildcard.
+        " closer, so it may be a trimmed version of the opener's wildcard.
         let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
         let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
 
@@ -83,15 +83,15 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
         " Unescape asterisks
         let l:opener_hint = pear_tree#string#Encode(a:opener, '*', '')
     endif
-    let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard, a:start)
+    let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
 
     let l:current_pos = a:start
-    let l:delim_pos = [l:current_pos[0], l:current_pos[1] + 1]
+    let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
     let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
     while l:current_pos[0] != -1
-        " Find the previous opener and delimiter in the buffer.
+        " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) < 0
             if a:wildcard ==# ''
                 let l:opener_pos = pear_tree#buffer#Search(a:opener, l:current_pos, l:not_in)
@@ -106,7 +106,7 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
                     let l:end_pos = pear_tree#buffer#Search(a:opener[-1:], l:search_pos)
                     call l:traverser.Reset()
                     if l:traverser.WeakTraverseBuffer(l:search_pos, l:end_pos)[0] != -1
-                                \ && pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:delim
+                                \ && pear_tree#GenerateCloser(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:closer
                         break
                     endif
                     let l:search_pos[1] = l:search_pos[1] + 1
@@ -114,20 +114,20 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
                 let l:opener_pos = l:search_pos
             endif
         endif
-        if pear_tree#buffer#ComparePositions(l:delim_pos, l:current_pos) < 0
-            let l:delim_pos = pear_tree#buffer#Search(l:delim, l:current_pos, l:not_in)
+        if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) < 0
+            let l:closer_pos = pear_tree#buffer#Search(l:closer, l:current_pos, l:not_in)
         endif
         if l:opener_pos != [-1, -1]
-                    \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:delim_pos) <= 0
-                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:delim))
+                    \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) <= 0
+                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
             let l:current_pos = [l:opener_pos[0], l:opener_pos[1] + 1]
-        elseif l:delim_pos != [-1, -1] && l:count != 0
+        elseif l:closer_pos != [-1, -1] && l:count != 0
             let l:count = l:count - 1
             if l:count == 0
-                return l:delim_pos
+                return l:closer_pos
             endif
-            let l:current_pos = [l:delim_pos[0], l:delim_pos[1] + 1]
+            let l:current_pos = [l:closer_pos[0], l:closer_pos[1] + 1]
         else
             return [-1, -1]
         endif
@@ -140,7 +140,7 @@ endfunction
 " unbalanced, return [-1, -1].
 "
 " An optional argument {skip_count} tells the function to ignore the first
-" {skip_count} openers. This can be used to see if the delimiter at {start}
+" {skip_count} openers. This can be used to see if the closer at {start}
 " would be balanced if the previous {skip_count} openers were deleted.
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
@@ -148,7 +148,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     if a:wildcard !=# ''
         " Generate a hint to find openers faster when the pair contains a
         " wildcard. The {wildcard} is the wildcard string as it appears in the
-        " delimiter, so it may be a trimmed version of the opener's wildcard.
+        " closer, so it may be a trimmed version of the opener's wildcard.
         let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
         let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
 
@@ -158,15 +158,15 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         " Unescape asterisks
         let l:opener_hint = pear_tree#string#Encode(a:opener, '*', '')
     endif
-    let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard, a:start)
+    let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
 
     let l:current_pos = a:start
-    let l:delim_pos = [l:current_pos[0], l:current_pos[1] + 1]
+    let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
     let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
     while l:current_pos[0] > -1
-        " Find the previous opener and delimiter in the buffer.
+        " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) > 0
             if a:wildcard ==# ''
                 let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_pos, l:not_in)
@@ -180,7 +180,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                     let l:search_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:search_pos)
                     let l:end_pos = l:traverser.WeakTraverseBuffer(l:search_pos, l:opener_pos)
                     if l:end_pos[0] != -1
-                                \ && pear_tree#GenerateDelimiter(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:delim
+                                \ && pear_tree#GenerateCloser(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:closer
                         break
                     endif
                     let l:search_pos[1] = l:search_pos[1] - 1
@@ -188,14 +188,14 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                 let l:opener_pos = l:search_pos
             endif
         endif
-        if pear_tree#buffer#ComparePositions(l:delim_pos, l:current_pos) > 0
-            let l:delim_pos = pear_tree#buffer#ReverseSearch(l:delim, l:current_pos, l:not_in)
+        if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) > 0
+            let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:current_pos, l:not_in)
         endif
-        if l:delim_pos[0] != -1
-                    \ && pear_tree#buffer#ComparePositions(l:delim_pos, l:opener_pos) >= 0
-                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:delim))
+        if l:closer_pos[0] != -1
+                    \ && pear_tree#buffer#ComparePositions(l:closer_pos, l:opener_pos) >= 0
+                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
-            let l:current_pos = [l:delim_pos[0], l:delim_pos[1] - 1]
+            let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]
         elseif l:opener_pos[0] != -1 && l:count != 0
             let l:count = l:count - 1
             if l:count == 0
@@ -211,23 +211,23 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
 endfunction
 
 
-" Return the opener and delimiter that surround the cursor, as well as the
+" Return the opener and closer that surround the cursor, as well as the
 " wildcard string and the position of the opener.
 function! pear_tree#GetSurroundingPair() abort
-    let l:delims = map(keys(pear_tree#Pairs()), 'pear_tree#GetRule(v:val, ''delimiter'')')
-    let l:delim_trie = pear_tree#trie#New(l:delims)
-    let l:delim_traverser = pear_tree#trie#Traverser(l:delim_trie)
-    let l:start = l:delim_traverser.WeakTraverseBuffer([line('.'), col('.') - 1], pear_tree#buffer#End())
+    let l:closers = map(keys(pear_tree#Pairs()), 'pear_tree#GetRule(v:val, ''closer'')')
+    let l:closer_trie = pear_tree#trie#New(l:closers)
+    let l:closer_traverser = pear_tree#trie#Traverser(l:closer_trie)
+    let l:start = l:closer_traverser.WeakTraverseBuffer([line('.'), col('.') - 1], pear_tree#buffer#End())
     if l:start[0] == -1
         return []
     endif
-    let l:delim = l:delim_traverser.GetString()
-    let l:wildcard = l:delim_traverser.GetWildcardString()
+    let l:closer = l:closer_traverser.GetString()
+    let l:wildcard = l:closer_traverser.GetWildcardString()
     for l:opener in keys(pear_tree#Pairs())
-        if pear_tree#GetRule(l:opener, 'delimiter') ==# l:delim
+        if pear_tree#GetRule(l:opener, 'closer') ==# l:closer
             let l:pos = pear_tree#IsBalancedPair(l:opener, l:wildcard, l:start)
             if l:pos[0] != -1
-                return [l:opener, l:delim, l:wildcard, l:pos]
+                return [l:opener, l:closer, l:wildcard, l:pos]
             endif
         endif
     endfor
@@ -242,31 +242,31 @@ function! pear_tree#Backspace() abort
     endif
     let l:next_char = pear_tree#cursor#NextChar()
 
-    if pear_tree#GetRule(l:prev_char, 'delimiter') !=# l:next_char
+    if pear_tree#GetRule(l:prev_char, 'closer') !=# l:next_char
         let l:should_delete_both = 0
     elseif pear_tree#IsDumbPair(l:prev_char)
         let l:should_delete_both = 1
     elseif get(g:, 'pear_tree_smart_backspace', get(b:, 'pear_tree_smart_backspace', 0))
-        " Get the first delimiter after the cursor not preceded by an opener.
+        " Get the first closer after the cursor not preceded by an opener.
         let l:not_in = pear_tree#GetRule(l:prev_char, 'not_in')
 
         let l:opener_pos = pear_tree#buffer#Search(l:prev_char, pear_tree#cursor#Position(), l:not_in)
-        let l:delim_pos = pear_tree#buffer#Search(l:next_char, pear_tree#cursor#Position(), l:not_in)
+        let l:closer_pos = pear_tree#buffer#Search(l:next_char, pear_tree#cursor#Position(), l:not_in)
         if l:opener_pos != [-1, -1]
-            while pear_tree#buffer#ComparePositions(l:opener_pos, l:delim_pos) < 0
+            while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
                         \ && l:opener_pos != [-1, -1]
                 let l:opener_pos[1] += 1
-                let l:delim_pos[1] += 1
+                let l:closer_pos[1] += 1
                 let l:opener_pos = pear_tree#buffer#Search(l:prev_char, l:opener_pos, l:not_in)
-                let l:delim_pos = pear_tree#buffer#Search(l:next_char, l:delim_pos, l:not_in)
+                let l:closer_pos = pear_tree#buffer#Search(l:next_char, l:closer_pos, l:not_in)
             endwhile
         endif
-        let l:delim_pos = pear_tree#buffer#ReverseSearch(l:next_char, l:opener_pos, l:not_in)
-        if l:delim_pos[0] == -1
-            let l:delim_pos = pear_tree#buffer#End()
+        let l:closer_pos = pear_tree#buffer#ReverseSearch(l:next_char, l:opener_pos, l:not_in)
+        if l:closer_pos[0] == -1
+            let l:closer_pos = pear_tree#buffer#End()
         endif
-        " Will deleting both make the next delimiter unbalanced?
-        let l:should_delete_both = (pear_tree#IsBalancedPair(l:prev_char, '', l:delim_pos, 1) == [-1, -1])
+        " Will deleting both make the next closer unbalanced?
+        let l:should_delete_both = (pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, 1) == [-1, -1])
     else
         let l:should_delete_both = 1
     endif
@@ -285,8 +285,8 @@ function! pear_tree#PrepareExpansion() abort
     if l:pair == []
         return "\<CR>"
     endif
-    let [l:opener, l:delim, l:wildcard, l:opener_pos] = l:pair
-    let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard, l:cursor_pos)
+    let [l:opener, l:closer, l:wildcard, l:opener_pos] = l:pair
+    let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, l:cursor_pos)
     if (l:opener_pos[0] == l:cursor_pos[0]) && (l:opener_pos[1] + 1 == l:cursor_pos[1] - 1)
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         call add(s:strings_to_expand, l:text_after_cursor)
@@ -316,9 +316,9 @@ function! pear_tree#JumpOut() abort
     if l:pair == []
         return ''
     endif
-    let [l:opener, l:delim, l:wildcard] = l:pair[:2]
-    let l:delim = pear_tree#GenerateDelimiter(l:opener, l:wildcard, pear_tree#cursor#Position())
-    return repeat(s:RIGHT, pear_tree#string#VisualLength(l:delim))
+    let [l:opener, l:closer, l:wildcard] = l:pair[:2]
+    let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, pear_tree#cursor#Position())
+    return repeat(s:RIGHT, pear_tree#string#VisualLength(l:closer))
 endfunction
 
 

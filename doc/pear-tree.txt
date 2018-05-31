@@ -43,24 +43,24 @@ Type: Dictionary
 
 Default: >
     {
-    \   '(': {'delimiter': ')'},
-    \   '[': {'delimiter': ']'},
-    \   '{': {'delimiter': '}'},
-    \   "'": {'delimiter': "'", 'not_in': ['String']},
-    \   '"': {'delimiter': '"', 'not_in': ['String']}
+    \   '(': {'closer': ')'},
+    \   '[': {'closer': ']'},
+    \   '{': {'closer': '}'},
+    \   "'": {'closer': "'", 'not_in': ['String']},
+    \   '"': {'closer': '"', 'not_in': ['String']}
     \ }
 <
-Define the opening strings and the delimiters with which they are to be
+Define the opening strings and the closers with which they are to be
 matched. Buffer-local rules take priority over global rules. Define
 `b:pear_tree_pairs` in the appropriate file in your ftplugin folder to
 override the default rules for certain filetypes.
 
 Each rule in `g:pear_tree_pairs` has the following form: >
-    opener: {'delimiter': delimiter, [options ...]}
+    opener_string: {'closer': closer_string, [options ...]}
 <
-In the rule, `opener` is the string that must be typed, and `delimiter` is the
-string to be automatically inserted. Both may be any length and may contain a
-wildcard, (see |pear-tree-wildcards|).
+In the rule, `opener_string` is the string that should be typed, and
+`closer_string` is the string to be automatically inserted. Both may be any
+length and may contain a wildcard (see |pear-tree-wildcards|).
 
 Each rule can also contain options that modify the pairing behavior
 (see |pear-tree-rule-options|).
@@ -71,10 +71,10 @@ Pear Tree supports wildcard matching in string pairs. Wildcards are specified
 by using an asterisk `*` within the pairs. A wildcard matches user input until
 the next explicitly defined character in the opener is entered.
 
-A wildcard in the delimiter is replaced by the string of characters to which
+A wildcard in the closer is replaced by the string of characters to which
 the wildcard character in the opener was matched. As an example, with
 `g:pear_tree_pairs` containing the following rule: >
-    '<*>': {'delimiter': '</*>'}
+    '<*>': {'closer': '</*>'}
 <Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, etc.
 
 To include a literal asterisk in a rule, you must escape it with a backslash
@@ -90,20 +90,20 @@ behavior:
     Form: `'not_in': [syntax_region, ...]`
     Function: Do not match the opener you are typing in a syntax region
               contained in the list (requires syntax to be enabled).
-    Example: `'(': {'delimiter': ')', 'not_in': ['String', 'Comment']}`
+    Example: `'(': {'closer': ')', 'not_in': ['String', 'Comment']}`
 
     `not_if`
     Form: `'not_if': [string, ...]`
     Function: Do not match an opener that contains a wildcard if the value of
               that wildcard is contained in the list.
-    Example: `'<*>': {'delimiter': '</*>', 'not_if': ['br', 'meta']}`
+    Example: `'<*>': {'closer': '</*>', 'not_if': ['br', 'meta']}`
 
     `until`
     Form: `'until': regexp`
-    Function: Replace the wildcard character in the delimiter with the
+    Function: Replace the wildcard character in the closer with the
               wildcard string in the opener only until the regexp pattern is
               matched. See `:h match()` for valid patterns.
-    Example: `'<*>': {'delimiter': '</*>', 'until': '\W'}`
+    Example: `'<*>': {'closer': '</*>', 'until': '\W'}`
              Typing `<p class="Foo">` yields `<p class="Foo"></p>`, and not
              `<p class="Foo"></p class="Foo">` because the space after `<p`
              matches the regexp pattern `'\W'`.
@@ -129,7 +129,7 @@ Type: Number
 Default: `0`
 
 If the value is not 0, Pear Tree will attempt to maintain pair balance when
-typing a single-character opener instead of always inserting the delimiter:
+typing a single-character opener instead of always inserting the closer:
 
                       |   Enabled    |   Disabled   |
         ---------------------------------------------
@@ -153,8 +153,8 @@ Type: Number
 Default: `0`
 
 If the value is not 0, Pear Tree will attempt to maintain pair balance when
-typing a single-character delimiter instead of always moving the cursor past
-the following delimiter:
+typing a single-character closer instead of always moving the cursor past
+the following closer:
 
                       |   Enabled    |   Disabled   |
         ---------------------------------------------
@@ -162,7 +162,7 @@ the following delimiter:
         |   Type )    |  `(foo(bar)|)` |  `(foo(bar)|`  |
         |   Result    |  `(foo(bar))`  |  `(foo(bar)`   |
 
-If enabled, Pear Tree will check if the first opening parenthesis is balanced.
+If enabled, Pear Tree will check if the first open parenthesis is balanced.
 Since it is not, typing `)` inserts `)` instead of moving the cursor over the
 close parenthesis, thereby making both pairs of parentheses balanced.
 
@@ -199,7 +199,7 @@ To enable, add the following to your vimrc:
                                                     *<Plug>(PearTreeBackspace)*
 Default: `<BS>`
 
-If the cursor is between an opener and delimiter, delete both. Otherwise, act
+If the cursor is between an opener and closer, delete both. Otherwise, act
 like a typical backspace.
 
 Usage: return foo(|) -> return foo|
@@ -212,10 +212,10 @@ To change the default mapping, add something like the following to your vimrc:
                                                        *<Plug>(PearTreeExpand)*
 Default: `<CR>`
 
-If cursor is between an opener and delimiter, add a new line and prepare to
-add the delimiter on the line following the cursor's new position.
+If cursor is between an opener and closer, add a new line and prepare to
+add the closer on the line following the cursor's new position.
 
-In order to not break the |.| command, the delimiter is temporarily erased. It
+In order to not break the |.| command, the closer is temporarily erased. It
 will automatically be added back to the line following the cursor by
 |<Plug>(PearTreeFinishExpansion)|
 
@@ -236,7 +236,7 @@ To change the default mapping, add something like the following to your vimrc:
                                               *<Plug>(PearTreeFinishExpansion)*
 Default: `<ESC>`
 
-If |<Plug>(PearTreeExpand)| has been used, add the delimiters to their proper
+If |<Plug>(PearTreeExpand)| has been used, add the closers to their proper
 positions. After they have been restored, leave insert mode.
 
 Usage: >
@@ -258,8 +258,8 @@ To change the default mapping, add something like the following to your vimrc:
                                                          *<Plug>(PearTreeJump)*
 Default: `<C-l>`
 
-If the cursor is before a delimiter whose opener appears earlier in the text,
-move the cursor past the delimiter.
+If the cursor is before a closer whose opener appears earlier in the text,
+move the cursor past the closer.
 
 Usage: >
     1  <p class="Foo">Hello, world!|</p>
@@ -277,7 +277,7 @@ To set the mapping, add something like the following to your vimrc:
 Default: None
 
 If |<Plug>(PearTreeExpand)| has been used multiple times, leading to nested
-pairs, add only the innermost delimiter to its proper position.
+pairs, add only the innermost closer to its proper position.
 
 Usage: >
     1  <html>
@@ -302,8 +302,8 @@ To set the mapping, add something like the following to your vimrc:
                                                           *<Plug>(PearTreeJNR)*
 Default: None
 
-If the cursor is before a delimiter whose opener appears earlier in the text,
-move the cursor past the delimiter and insert a newline ("jump 'n return").
+If the cursor is before a closer whose opener appears earlier in the text,
+move the cursor past the closer and insert a newline ("jump 'n return").
 
 Usage: >
     1  <p class="Foo">Hello, world!|</p>

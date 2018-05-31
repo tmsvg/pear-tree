@@ -6,7 +6,7 @@ Purpose
 -------
 **Pear Tree** automatically pairs braces, quotes, HTML tags, and many other text items based on a simple-to-define set of rules, and provides pair-wise deletion, newline expansion, and other usual auto-pair features.
 
-Though Pear Tree was originally intended to simply be an easily configurable auto-pairing plugin that wouldn't break undo or dot-repeat, I later found a nice way to allow for the pairing of strings longer than a single character and strings containing wildcard rules. This allows Pear Tree to easily match HTML tags and C-style block comment delimiters using simple rule definitions.
+Though Pear Tree was originally intended to simply be an easily configurable auto-pairing plugin that wouldn't break undo or dot-repeat, I later found a nice way to allow for the pairing of strings longer than a single character and strings containing wildcard rules. This allows Pear Tree to easily match HTML tags and C-style block comment closers using simple rule definitions.
 
 Installation
 ------------
@@ -79,7 +79,7 @@ Finally, move to line 5 and use the `.` command:
 7  }
 ```
 
-Many implementations of this feature would cause the `.` command to only repeat `return 1;` instead of the entire typing sequence.
+Many implementations of this feature cause the `.` command to only repeat `return 1;` instead of the entire typing sequence.
 
 Usage
 -------
@@ -93,20 +93,20 @@ For filetype-specific matching rules, define `b:pear_tree_pairs` in the appropri
 Each dictionary item has the following form:
 
 ```vim
-opener: {'delimiter': delimiter, [options ...]}
+opener_string: {'closer': closer_string, [options ...]}
 ```
 
 #### Wildcards
 
 As previously mentioned, Pear Tree supports wildcard matching in string pairs. Wildcards are specified by using an asterisk `*` within the pairs. A wildcard matches user input until the next explicitly defined character in the opener is entered.
 
-A wildcard in the delimiter is replaced by the string of characters to which the wildcard character in the opener was matched. As an example, with `g:pear_tree_pairs` containing the following rule:
+A wildcard in the closer is replaced by the string of characters to which the wildcard character in the opener was matched. As an example, with `g:pear_tree_pairs` containing the following rule:
 
 ```vim
-'<*>': {'delimiter': '</*>'}
+'<*>': {'closer': '</*>'}
 ```
 
-Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, and (using an option discussed later to limit characters inserted in the delimiter) `<p class="Foo">` yields `<p class="Foo"></p>`.
+Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, and (using an option discussed later to limit characters inserted in the closer) `<p class="Foo">` yields `<p class="Foo"></p>`.
 
 To include a literal asterisk in a rule, you must escape it with a backslash like `\*`. Similarly, to include a literal backslash in a rule, you must escape it with another backslash like `\\`.
 
@@ -117,30 +117,30 @@ A Pear Tree rule includes several options to more finely tune its matching behav
 - `not_in`
     - Form: `'not_in': [syntax region, ...]`,
     - Function: Do not match an opener if the syntax region you are typing in is contained in the list.
-    - Example: `'(': {'delimiter': ')', 'not_in': ['String', 'Comment']}`
+    - Example: `'(': {'closer': ')', 'not_in': ['String', 'Comment']}`
     - Notes: This requires syntax to be enabled.
 
 - `not_if`
     - Form: `'not_if': [string, ...]`
     - Function: Do not match an opener that contains a wildcard if the value of that wildcard is contained in the list.
-    - Example: `'<*>': {'delimiter': '</*>', 'not_if': ['br', 'meta']}`
+    - Example: `'<*>': {'closer': '</*>', 'not_if': ['br', 'meta']}`
 
 - `until`
     - Form: `'until': regexp pattern`
-    - Function: Replace the wildcard character in the delimiter with the wildcard string in the opener only until the regexp pattern is matched. See `:h match()` for valid patterns.
-    - Example: `'<*>': {'delimiter': '</*>', 'until': '\W'}`
+    - Function: Replace the wildcard character in the closer with the wildcard string in the opener only until the regexp pattern is matched. See `:h match()` for valid patterns.
+    - Example: `'<*>': {'closer': '</*>', 'until': '\W'}`
     Typing `<p class="Foo">` yields `<p class="Foo"></p>`, and **not** `<p class="Foo"></p class="Foo">` because the space after `<p` matches the regexp pattern `'\W'`.
     - Notes: Defaults to `'[[:punct:][:space:]]'` (punctuation or space) if not set.
 
 ### Mappings
 
 - `<Plug>(PearTreeBackspace)`
-    - If cursor is between an opener and delimiter, delete both. Otherwise, act like typical backspace.
+    - If cursor is between an opener and closer, delete both. Otherwise, act like typical backspace.
     - Example: `return foo(|)` -> `return foo|`
     - Default mapping: `<BS>`
 
 - `<Plug>(PearTreeExpand)`
-    - If cursor is between an opener and delimiter, add a new line and prepare to add the delimiter on the line following the cursor's new position.
+    - If cursor is between an opener and closer, add a new line and prepare to add the closer on the line following the cursor's new position.
     - Example:
         ```c
         1  int foo() {|}
@@ -154,7 +154,7 @@ A Pear Tree rule includes several options to more finely tune its matching behav
     - Default mapping: `<CR>`
 
 - `<Plug>(PearTreeFinishExpansion)`
-    - If `<Plug>PearTreeExpand` has been used, add the delimiters to their proper positions.
+    - If `<Plug>PearTreeExpand` has been used, add the closers to their proper positions.
     - Example (continued from above):
         ```c
         1  int foo() {
@@ -170,7 +170,7 @@ A Pear Tree rule includes several options to more finely tune its matching behav
     - Default mapping: `<ESC>`
 
 - `<Plug>(PearTreeJump)`
-    - If the cursor is before a delimiter whose opener appears earlier in the text, move the cursor past the delimiter.
+    - If the cursor is before a closer whose opener appears earlier in the text, move the cursor past the closer.
     - Example:
         ```html
         1  <p class="Foo">Hello, world!|</p>
@@ -182,7 +182,7 @@ A Pear Tree rule includes several options to more finely tune its matching behav
     - Default mapping: `<C-l>`
 
 - `<Plug>(PearTreeExpandOne)`
-    - If `<Plug>(PearTreeExpand)` has been used multiple times, leading to nested pairs, add the innermost delimiter to its proper position.
+    - If `<Plug>(PearTreeExpand)` has been used multiple times, leading to nested pairs, add the innermost closer to its proper position.
     - Example:
         ```html
         1  <html>|</html>
@@ -213,7 +213,7 @@ A Pear Tree rule includes several options to more finely tune its matching behav
 
 
 - `<Plug>(PearTreeJNR)`
-    - If the cursor is before a delimiter whose opener appears earlier in the text, move the cursor past the delimiter and insert a newline ("jump 'n return").
+    - If the cursor is before a closer whose opener appears earlier in the text, move the cursor past the closer and insert a newline ("jump 'n return").
     - Example:
         ```html
         1  <p class="Foo">Hello, world!|</p>
@@ -232,11 +232,11 @@ Listed here is a summary of default global configurations used by Pear Tree.
 ```vim
 " Default rules for matching:
 let g:pear_tree_pairs = {
-            \ '(': {'delimiter': ')'},
-            \ '[': {'delimiter': ']'},
-            \ '{': {'delimiter': '}'},
-            \ "'": {'delimiter': "'", 'not_in': ['String']},
-            \ '"': {'delimiter': '"', 'not_in': ['String']}
+            \ '(': {'closer': ')'},
+            \ '[': {'closer': ']'},
+            \ '{': {'closer': '}'},
+            \ "'": {'closer': "'", 'not_in': ['String']},
+            \ '"': {'closer': '"', 'not_in': ['String']}
             \ }
 " See pear-tree/ftplugin/ for filetype-specific matching rules
 ```

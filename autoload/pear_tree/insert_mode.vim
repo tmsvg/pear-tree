@@ -48,7 +48,7 @@ endfunction
 
 " Define situations in which Pear Tree should close a simple opener.
 function! s:ShouldCloseSimpleOpener(char) abort
-    let l:delim = pear_tree#GetRule(a:char, 'delimiter')
+    let l:closer = pear_tree#GetRule(a:char, 'closer')
     let l:next_char = pear_tree#cursor#NextChar()
     let l:prev_char = pear_tree#cursor#PrevChar()
     let l:is_dumb = pear_tree#IsDumbPair(a:char)
@@ -59,32 +59,33 @@ function! s:ShouldCloseSimpleOpener(char) abort
         if !pear_tree#cursor#OnEmptyLine()
                     \ && !pear_tree#cursor#AtEndOfLine()
                     \ && l:next_char !~# '\s'
-                    \ && l:next_char !=# l:delim
+                    \ && l:next_char !=# l:closer
             return 0
         endif
-        " Get the first delimiter after the cursor not preceded by an opener.
+        " Get the first closer after the cursor not preceded by an opener.
         let l:not_in = pear_tree#GetRule(a:char, 'not_in')
 
         let l:opener_pos = pear_tree#buffer#Search(a:char, pear_tree#cursor#Position(), l:not_in)
-        let l:delim_pos = pear_tree#buffer#Search(l:delim, pear_tree#cursor#Position(), l:not_in)
-        if l:opener_pos != [-1, -1]
-            while pear_tree#buffer#ComparePositions(l:opener_pos, l:delim_pos) < 0
-                        \ && l:opener_pos != [-1, -1]
-                let l:opener_pos[1] += 1
-                let l:delim_pos[1] += 1
-                let l:opener_pos = pear_tree#buffer#Search(a:char, l:opener_pos, l:not_in)
-                let l:delim_pos = pear_tree#buffer#Search(l:delim, l:delim_pos, l:not_in)
-            endwhile
-            let l:delim_pos = pear_tree#buffer#ReverseSearch(l:delim, l:opener_pos, l:not_in)
+        let l:closer_pos = pear_tree#buffer#Search(l:closer, pear_tree#cursor#Position(), l:not_in)
+        while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                    \ && l:opener_pos != [-1, -1]
+            let l:opener_pos[1] += 1
+            let l:closer_pos[1] += 1
+            let l:opener_pos = pear_tree#buffer#Search(a:char, l:opener_pos, l:not_in)
+            let l:closer_pos = pear_tree#buffer#Search(l:closer, l:closer_pos, l:not_in)
+        endwhile
+        if l:opener_pos == [-1, -1]
+            let l:opener_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#buffer#End(), l:not_in)
         endif
-        return l:delim_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:delim_pos) != [-1, -1]
+        let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:opener_pos, l:not_in)
+        return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
     elseif pear_tree#cursor#OnEmptyLine()
                 \ || pear_tree#cursor#AtEndOfLine()
                 \ || l:next_char =~# '\s'
-                \ || l:next_char ==# l:delim
+                \ || l:next_char ==# l:closer
         return 1
     elseif has_key(pear_tree#Pairs(), l:prev_char)
-                \ && pear_tree#GetRule(l:prev_char, 'delimiter') ==# l:next_char
+                \ && pear_tree#GetRule(l:prev_char, 'closer') ==# l:next_char
         return 1
     else
         return 0
@@ -94,8 +95,8 @@ endfunction
 
 function! pear_tree#insert_mode#CloseSimpleOpener(char) abort
     if s:ShouldCloseSimpleOpener(a:char)
-        let l:delim = pear_tree#GenerateDelimiter(a:char, '', pear_tree#cursor#Position())
-        return l:delim . repeat(s:LEFT, pear_tree#string#VisualLength(l:delim))
+        let l:closer = pear_tree#GenerateCloser(a:char, '', pear_tree#cursor#Position())
+        return l:closer . repeat(s:LEFT, pear_tree#string#VisualLength(l:closer))
     else
         return ''
     endif
@@ -131,15 +132,15 @@ endfunction
 
 function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard) abort
     if s:ShouldCloseComplexOpener()
-        let l:delim = pear_tree#GenerateDelimiter(a:opener, a:wildcard, pear_tree#cursor#Position())
-        return l:delim . repeat(s:LEFT, pear_tree#string#VisualLength(l:delim))
+        let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, pear_tree#cursor#Position())
+        return l:closer . repeat(s:LEFT, pear_tree#string#VisualLength(l:closer))
     else
         return ''
     endif
 endfunction
 
 
-function! s:ShouldSkipDelimiter(char) abort
+function! s:ShouldSkipCloser(char) abort
     if pear_tree#cursor#NextChar() !=# a:char
         return 0
     elseif get(g:, 'pear_tree_smart_closers', get(b:, 'pear_tree_smart_closers', 0))
@@ -147,22 +148,22 @@ function! s:ShouldSkipDelimiter(char) abort
             return 1
         endif
         for l:opener in keys(pear_tree#Pairs())
-            if pear_tree#GetRule(l:opener, 'delimiter') ==# a:char
+            if pear_tree#GetRule(l:opener, 'closer') ==# a:char
                 break
             endif
         endfor
         let l:not_in = pear_tree#GetRule(l:opener, 'not_in')
         let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, pear_tree#cursor#Position(), l:not_in)
-        let l:delim_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#cursor#Position(), l:not_in)
-        if l:delim_pos != [-1, -1]
-            while pear_tree#buffer#ComparePositions(l:opener_pos, l:delim_pos) < 0
-                        \ && l:delim_pos != [-1, -1]
+        let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#cursor#Position(), l:not_in)
+        if l:closer_pos != [-1, -1]
+            while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                        \ && l:closer_pos != [-1, -1]
                 let l:opener_pos[1] -= 1
-                let l:delim_pos[1] -= 1
+                let l:closer_pos[1] -= 1
                 let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, l:opener_pos, l:not_in)
-                let l:delim_pos = pear_tree#buffer#ReverseSearch(a:char, l:delim_pos, l:not_in)
+                let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, l:closer_pos, l:not_in)
             endwhile
-            let l:opener_pos = pear_tree#buffer#Search(l:opener, l:delim_pos, l:not_in)
+            let l:opener_pos = pear_tree#buffer#Search(l:opener, l:closer_pos, l:not_in)
             let l:opener_pos[1] -= 1
         endif
         return l:opener_pos == [-1, -1] || pear_tree#IsBalancedOpener(l:opener, '', l:opener_pos) != [-1, -1]
@@ -172,8 +173,8 @@ function! s:ShouldSkipDelimiter(char) abort
 endfunction
 
 
-function! pear_tree#insert_mode#HandleDelimiter(char) abort
-    if pear_tree#cursor#NextChar() ==# a:char && s:ShouldSkipDelimiter(a:char)
+function! pear_tree#insert_mode#HandleCloser(char) abort
+    if pear_tree#cursor#NextChar() ==# a:char && s:ShouldSkipCloser(a:char)
         return "\<Del>" . a:char
     elseif pear_tree#IsDumbPair(a:char)
         return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
@@ -193,7 +194,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
                     \ || !pear_tree#trie#HasChild(s:traverser.GetCurrent(), a:char)
                     \ )
         if pear_tree#IsDumbPair(a:char)
-            return pear_tree#insert_mode#HandleDelimiter(a:char)
+            return pear_tree#insert_mode#HandleCloser(a:char)
         else
             return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
         endif

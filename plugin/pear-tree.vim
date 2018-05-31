@@ -8,11 +8,11 @@ set cpoptions&vim
 
 if !exists('g:pear_tree_pairs')
     let g:pear_tree_pairs = {
-                \ '(': {'delimiter': ')'},
-                \ '[': {'delimiter': ']'},
-                \ '{': {'delimiter': '}'},
-                \ "'": {'delimiter': "'", 'not_in': ['String']},
-                \ '"': {'delimiter': '"', 'not_in': ['String']}
+                \ '(': {'closer': ')'},
+                \ '[': {'closer': ']'},
+                \ '{': {'closer': '}'},
+                \ "'": {'closer': "'", 'not_in': ['String']},
+                \ '"': {'closer': '"', 'not_in': ['String']}
                 \ }
 endif
 
@@ -68,7 +68,7 @@ endfunction
 
 function! s:MapPairs()
     for l:opener in keys(pear_tree#Pairs())
-        let l:delim = pear_tree#GetRule(l:opener, 'delimiter')
+        let l:closer = pear_tree#GetRule(l:opener, 'closer')
         let l:opener = l:opener[-1:]
 
         let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
@@ -77,12 +77,12 @@ function! s:MapPairs()
                     \ . ' pear_tree#insert_mode#TerminateOpener('''
                     \ . l:escaped_opener . ''')'
 
-        if strlen(l:delim) == 1 && !has_key(pear_tree#Pairs(), l:delim)
-            let l:escaped_delim = substitute(l:delim, "'", "''", 'g')
+        if strlen(l:closer) == 1 && !has_key(pear_tree#Pairs(), l:closer)
+            let l:escaped_closer = substitute(l:closer, "'", "''", 'g')
             execute 'inoremap <silent> <expr> <buffer> '
-                        \ . l:delim
-                        \ . ' pear_tree#insert_mode#HandleDelimiter('''
-                        \ . l:escaped_delim . ''')'
+                        \ . l:closer
+                        \ . ' pear_tree#insert_mode#HandleCloser('''
+                        \ . l:escaped_closer . ''')'
         endif
     endfor
 endfunction
@@ -90,13 +90,13 @@ endfunction
 
 function! s:UnmapPairs()
     for l:opener in keys(pear_tree#Pairs())
-        let l:delim = pear_tree#GetRule(l:opener, 'delimiter')
+        let l:closer = pear_tree#GetRule(l:opener, 'closer')
         let l:opener = l:opener[-1:]
 
         if maparg(l:opener, 'i') =~# '^pear_tree#'
             execute 'silent! iunmap <buffer> ' . l:opener
         endif
-        if maparg(l:delim, 'i') =~# '^pear_tree#'
+        if maparg(l:closer, 'i') =~# '^pear_tree#'
             execute 'silent! iunmap <buffer> ' . l:opener
         endif
     endfor
