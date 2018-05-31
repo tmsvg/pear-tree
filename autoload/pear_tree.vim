@@ -252,19 +252,17 @@ function! pear_tree#Backspace() abort
 
         let l:opener_pos = pear_tree#buffer#Search(l:prev_char, pear_tree#cursor#Position(), l:not_in)
         let l:closer_pos = pear_tree#buffer#Search(l:next_char, pear_tree#cursor#Position(), l:not_in)
-        if l:opener_pos != [-1, -1]
-            while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                        \ && l:opener_pos != [-1, -1]
-                let l:opener_pos[1] += 1
-                let l:closer_pos[1] += 1
-                let l:opener_pos = pear_tree#buffer#Search(l:prev_char, l:opener_pos, l:not_in)
-                let l:closer_pos = pear_tree#buffer#Search(l:next_char, l:closer_pos, l:not_in)
-            endwhile
+        while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                    \ && l:opener_pos != [-1, -1]
+            let l:opener_pos[1] += 1
+            let l:closer_pos[1] += 1
+            let l:opener_pos = pear_tree#buffer#Search(l:prev_char, l:opener_pos, l:not_in)
+            let l:closer_pos = pear_tree#buffer#Search(l:next_char, l:closer_pos, l:not_in)
+        endwhile
+        if l:opener_pos == [-1, -1]
+            let l:opener_pos = pear_tree#buffer#End()
         endif
         let l:closer_pos = pear_tree#buffer#ReverseSearch(l:next_char, l:opener_pos, l:not_in)
-        if l:closer_pos[0] == -1
-            let l:closer_pos = pear_tree#buffer#End()
-        endif
         " Will deleting both make the next closer unbalanced?
         let l:should_delete_both = (pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, 1) == [-1, -1])
     else

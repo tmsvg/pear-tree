@@ -75,7 +75,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
             let l:closer_pos = pear_tree#buffer#Search(l:closer, l:closer_pos, l:not_in)
         endwhile
         if l:opener_pos == [-1, -1]
-            let l:opener_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#buffer#End(), l:not_in)
+            let l:opener_pos = pear_tree#buffer#End()
         endif
         let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:opener_pos, l:not_in)
         return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
@@ -155,17 +155,18 @@ function! s:ShouldSkipCloser(char) abort
         let l:not_in = pear_tree#GetRule(l:opener, 'not_in')
         let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, pear_tree#cursor#Position(), l:not_in)
         let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#cursor#Position(), l:not_in)
-        if l:closer_pos != [-1, -1]
-            while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                        \ && l:closer_pos != [-1, -1]
-                let l:opener_pos[1] -= 1
-                let l:closer_pos[1] -= 1
-                let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, l:opener_pos, l:not_in)
-                let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, l:closer_pos, l:not_in)
-            endwhile
-            let l:opener_pos = pear_tree#buffer#Search(l:opener, l:closer_pos, l:not_in)
+        while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                    \ && l:closer_pos != [-1, -1]
             let l:opener_pos[1] -= 1
+            let l:closer_pos[1] -= 1
+            let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, l:opener_pos, l:not_in)
+            let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, l:closer_pos, l:not_in)
+        endwhile
+        if l:closer_pos == [-1, -1]
+            let l:closer_pos = [1, 0]
         endif
+        let l:opener_pos = pear_tree#buffer#Search(l:opener, l:closer_pos, l:not_in)
+        let l:opener_pos[1] -= 1
         return l:opener_pos == [-1, -1] || pear_tree#IsBalancedOpener(l:opener, '', l:opener_pos) != [-1, -1]
     else
         return 1
@@ -184,7 +185,7 @@ function! pear_tree#insert_mode#HandleCloser(char) abort
 endfunction
 
 
-" Called when pressing the last letter in an opener string.
+" Called when pressing the last character in an opener string.
 function! pear_tree#insert_mode#TerminateOpener(char) abort
     " If entered a simple (length of 1) opener and not currently typing
     " a longer strict sequence, handle the trivial pair.
