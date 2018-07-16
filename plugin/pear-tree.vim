@@ -32,16 +32,17 @@ if !exists('g:pear_tree_smart_closers')
     let g:pear_tree_smart_closers = 0
 endif
 
+
 function! s:BufferEnable()
     if exists('b:pear_tree_enabled') && b:pear_tree_enabled
         return
     endif
-    call s:MapPairs()
     if exists('s:saved_mappings')
         for l:map in keys(s:saved_mappings)
             execute 'imap <buffer> ' . l:map . ' ' . s:saved_mappings[l:map]
         endfor
     else
+        call s:CreatePlugMappings()
         call s:MapDefaults()
     endif
     let b:pear_tree_enabled = 1
@@ -52,12 +53,11 @@ function! s:BufferDisable()
     if !(exists('b:pear_tree_enabled') && b:pear_tree_enabled)
         return
     endif
-    call s:UnmapPairs()
-
     let s:saved_mappings = {}
     for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
         let l:map_arg = maparg(l:map, 'i')
-        if l:map_arg =~# '^<Plug>(PearTree\w\+)'
+        if l:map_arg =~# '^<Plug>(PearTree\w\+\S*)'
+            echom l:map_arg
             let s:saved_mappings[l:map] = l:map_arg
             execute 'silent! iunmap <buffer> ' . l:map
         endif
@@ -66,44 +66,48 @@ function! s:BufferDisable()
 endfunction
 
 
-function! s:MapPairs()
-    for l:opener in keys(pear_tree#Pairs())
+function! s:CreatePlugMappings()
+    let l:pairs = pear_tree#Pairs()
+    for l:opener in keys(l:pairs)
         let l:closer = pear_tree#GetRule(l:opener, 'closer')
         let l:opener = l:opener[-1:]
 
         let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
         execute 'inoremap <silent> <expr> <buffer> '
-                    \ . l:opener
-                    \ . ' pear_tree#insert_mode#TerminateOpener('''
+                    \ . '<Plug>(PearTreeOpener_' . l:opener . ') '
+                    \ . 'pear_tree#insert_mode#TerminateOpener('''
                     \ . l:escaped_opener . ''')'
 
-        if strlen(l:closer) == 1 && !has_key(pear_tree#Pairs(), l:closer)
+        if strlen(l:closer) == 1 && !has_key(l:pairs, l:closer)
             let l:escaped_closer = substitute(l:closer, "'", "''", 'g')
             execute 'inoremap <silent> <expr> <buffer> '
-                        \ . l:closer
-                        \ . ' pear_tree#insert_mode#HandleCloser('''
+                        \ . '<Plug>(PearTreeCloser_' . l:closer . ') '
+                        \ . 'pear_tree#insert_mode#HandleCloser('''
                         \ . l:escaped_closer . ''')'
         endif
     endfor
-endfunction
-
-
-function! s:UnmapPairs()
-    for l:opener in keys(pear_tree#Pairs())
-        let l:closer = pear_tree#GetRule(l:opener, 'closer')
-        let l:opener = l:opener[-1:]
-
-        if maparg(l:opener, 'i') =~# '^pear_tree#'
-            execute 'silent! iunmap <buffer> ' . l:opener
-        endif
-        if maparg(l:closer, 'i') =~# '^pear_tree#'
-            execute 'silent! iunmap <buffer> ' . l:closer
-        endif
-    endfor
+    inoremap <silent> <expr> <Plug>(PearTreeBackspace) pear_tree#Backspace()
+    inoremap <silent> <expr> <Plug>(PearTreeJump) pear_tree#JumpOut()
+    inoremap <silent> <expr> <Plug>(PearTreeJNR) pear_tree#JumpNReturn()
+    inoremap <silent> <expr> <Plug>(PearTreeExpand) pear_tree#PrepareExpansion()
+    inoremap <silent> <expr> <Plug>(PearTreeExpandOne) pear_tree#ExpandOne()
+    inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#Expand()
 endfunction
 
 
 function! s:MapDefaults()
+    for l:opener in keys(pear_tree#Pairs())
+        let l:closer = pear_tree#GetRule(l:opener, 'closer')
+        let l:closer_plug = '<Plug>(PearTreeCloser_' . l:closer . ')'
+        if mapcheck(l:closer_plug, 'i') !=# '' && !hasmapto(l:closer_plug, 'i')
+            execute 'imap <buffer> ' . l:closer . ' ' l:closer_plug
+        endif
+        let l:opener = l:opener[-1:]
+        let l:opener_plug = '<Plug>(PearTreeOpener_' . l:opener . ')'
+        if !hasmapto(l:opener_plug, 'i')
+            execute 'imap <buffer> ' . l:opener . ' ' l:opener_plug
+        endif
+    endfor
     if !hasmapto('<Plug>(PearTreeBackspace)', 'i')
         imap <buffer> <BS> <Plug>(PearTreeBackspace)
     endif
@@ -118,13 +122,6 @@ function! s:MapDefaults()
     endif
 endfunction
 
-
-inoremap <silent> <expr> <Plug>(PearTreeBackspace) pear_tree#Backspace()
-inoremap <silent> <expr> <Plug>(PearTreeJump) pear_tree#JumpOut()
-inoremap <silent> <expr> <Plug>(PearTreeJNR) pear_tree#JumpNReturn()
-inoremap <silent> <expr> <Plug>(PearTreeExpand) pear_tree#PrepareExpansion()
-inoremap <silent> <expr> <Plug>(PearTreeExpandOne) pear_tree#ExpandOne()
-inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#Expand()
 
 command -bar PearTreeEnable call s:BufferEnable()
 command -bar PearTreeDisable call s:BufferDisable()
