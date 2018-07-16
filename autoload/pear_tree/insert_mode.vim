@@ -55,13 +55,14 @@ function! s:ShouldCloseSimpleOpener(char) abort
 
     if l:next_char =~# '\w' || (l:is_dumb && l:prev_char =~# '\w')
         return 0
+    elseif !pear_tree#cursor#OnEmptyLine()
+                \ && !pear_tree#cursor#AtEndOfLine()
+                \ && l:next_char !~# '\s'
+                \ && l:next_char !=# l:closer
+                \ && !(has_key(pear_tree#Pairs(), l:prev_char)
+                    \ && pear_tree#GetRule(l:prev_char, 'closer') ==# l:next_char)
+        return 0
     elseif !l:is_dumb && get(g:, 'pear_tree_smart_openers', get(b:, 'pear_tree_smart_openers', 0))
-        if !pear_tree#cursor#OnEmptyLine()
-                    \ && !pear_tree#cursor#AtEndOfLine()
-                    \ && l:next_char !~# '\s'
-                    \ && l:next_char !=# l:closer
-            return 0
-        endif
         " Get the first closer after the cursor not preceded by an opener.
         let l:not_in = pear_tree#GetRule(a:char, 'not_in')
 
@@ -79,16 +80,8 @@ function! s:ShouldCloseSimpleOpener(char) abort
         endif
         let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:opener_pos, l:not_in)
         return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
-    elseif pear_tree#cursor#OnEmptyLine()
-                \ || pear_tree#cursor#AtEndOfLine()
-                \ || l:next_char =~# '\s'
-                \ || l:next_char ==# l:closer
-        return 1
-    elseif has_key(pear_tree#Pairs(), l:prev_char)
-                \ && pear_tree#GetRule(l:prev_char, 'closer') ==# l:next_char
-        return 1
     else
-        return 0
+        return 1
     endif
 endfunction
 
