@@ -8,26 +8,26 @@ endif
 
 
 function! pear_tree#insert_mode#Prepare() abort
-    if exists('s:traverser')
+    if exists('b:traverser')
         return
     endif
     let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
-    let s:traverser = pear_tree#trie#Traverser(l:trie)
-    let s:current_line = line('.')
-    let s:current_column = col('.')
-    let s:ignore = 0
+    let b:traverser = pear_tree#trie#Traverser(l:trie)
+    let b:current_line = line('.')
+    let b:current_column = col('.')
+    let b:ignore = 0
 endfunction
 
 
 function! pear_tree#insert_mode#OnInsertCharPre() abort
-    let s:current_column = col('.') + 1
-    if !s:ignore
-        call s:traverser.StepOrReset(v:char)
+    let b:current_column = col('.') + 1
+    if !b:ignore
+        call b:traverser.StepOrReset(v:char)
     else
-        if s:traverser.AtWildcard()
-            let s:traverser.wildcard_string .= v:char
+        if b:traverser.AtWildcard()
+            let b:traverser.wildcard_string .= v:char
         endif
-        let s:ignore = s:ignore - 1
+        let b:ignore = b:ignore - 1
     endif
 endfunction
 
@@ -35,14 +35,14 @@ endfunction
 function! pear_tree#insert_mode#OnCursorMovedI() abort
     let l:new_line = line('.')
     let l:new_col = col('.')
-    if l:new_line != s:current_line || l:new_col < s:current_column
-        call s:traverser.Reset()
-        call s:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
-    elseif l:new_col > s:current_column
-        call s:traverser.TraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
+    if l:new_line != b:current_line || l:new_col < b:current_column
+        call b:traverser.Reset()
+        call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
+    elseif l:new_col > b:current_column
+        call b:traverser.TraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
     endif
-    let s:current_column = l:new_col
-    let s:current_line = l:new_line
+    let b:current_column = l:new_col
+    let b:current_line = l:new_line
 endfunction
 
 
@@ -190,23 +190,23 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     " If entered a simple (length of 1) opener and not currently typing
     " a longer strict sequence, handle the trivial pair.
     if has_key(pear_tree#Pairs(), a:char)
-                \ && (s:traverser.GetString() ==# ''
-                    \ || s:traverser.AtWildcard()
-                    \ || !pear_tree#trie#HasChild(s:traverser.GetCurrent(), a:char)
+                \ && (b:traverser.GetString() ==# ''
+                    \ || b:traverser.AtWildcard()
+                    \ || !pear_tree#trie#HasChild(b:traverser.GetCurrent(), a:char)
                     \ )
         if pear_tree#IsDumbPair(a:char)
             return pear_tree#insert_mode#HandleCloser(a:char)
         else
             return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
         endif
-    elseif s:traverser.StepToChild(a:char) && s:traverser.AtEndOfString()
-        let l:not_in = pear_tree#GetRule(s:traverser.GetString(), 'not_in')
+    elseif b:traverser.StepToChild(a:char) && b:traverser.AtEndOfString()
+        let l:not_in = pear_tree#GetRule(b:traverser.GetString(), 'not_in')
         if pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
-            let s:ignore = s:ignore + 1
+            let b:ignore = b:ignore + 1
         endif
-        return a:char . pear_tree#insert_mode#CloseComplexOpener(s:traverser.GetString(), s:traverser.GetWildcardString())
+        return a:char . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
     else
-        let s:ignore = s:ignore + 1
+        let b:ignore = b:ignore + 1
         return a:char
     endif
 endfunction
