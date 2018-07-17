@@ -70,7 +70,9 @@ endfunction
 function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
-    if a:wildcard !=# ''
+    let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
+    let l:has_wildcard = (l:idx != -1)
+    if l:has_wildcard
         " Generate a hint to find openers faster when the pair contains a
         " wildcard. The {wildcard} is the wildcard string as it appears in the
         " closer, so it may be a trimmed version of the opener's wildcard.
@@ -93,7 +95,7 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
     while l:current_pos[0] != -1
         " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) < 0
-            if a:wildcard ==# ''
+            if !l:has_wildcard
                 let l:opener_pos = pear_tree#buffer#Search(a:opener, l:current_pos, l:not_in)
             else
                 " Find the opener hint and ensure it points to a valid opener.
@@ -145,11 +147,13 @@ endfunction
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
-    if a:wildcard !=# ''
+    let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
+    let l:has_wildcard = (l:idx != -1)
+    if l:has_wildcard
         " Generate a hint to find openers faster when the pair contains a
         " wildcard. The {wildcard} is the wildcard string as it appears in the
         " closer, so it may be a trimmed version of the opener's wildcard.
-        let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
+        let l:opener_hint = a:opener[:(l:idx)]
         let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
 
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
@@ -161,14 +165,13 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-
     let l:current_pos = a:start
     let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
     let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
     while l:current_pos[0] > -1
         " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) > 0
-            if a:wildcard ==# ''
+            if !l:has_wildcard
                 let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_pos, l:not_in)
             else
                 " Search for the opener hint and ensure it is a valid opener.
@@ -199,8 +202,8 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         elseif l:opener_pos[0] != -1 && l:count != 0
             let l:count = l:count - 1
             if l:count == 0
-                return a:wildcard ==# '' ? [l:opener_pos[0], l:opener_pos[1] + strlen(l:opener_hint) - 1]
-                                       \ : l:end_pos
+                return l:has_wildcard ? l:end_pos
+                                    \ : [l:opener_pos[0], l:opener_pos[1] + strlen(l:opener_hint) - 1]
             endif
             let l:current_pos = [l:opener_pos[0], l:opener_pos[1] - 1]
         else
