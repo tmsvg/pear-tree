@@ -57,7 +57,6 @@ function! s:BufferDisable()
     for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
         let l:map_arg = maparg(l:map, 'i')
         if l:map_arg =~# '^<Plug>(PearTree\w\+\S*)'
-            echom l:map_arg
             let s:saved_mappings[l:map] = l:map_arg
             execute 'silent! iunmap <buffer> ' . l:map
         endif
