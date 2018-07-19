@@ -101,12 +101,14 @@ function! s:MapDefaults()
         if mapcheck(l:closer_plug, 'i') !=# '' && !hasmapto(l:closer_plug, 'i')
             execute 'imap <buffer> ' . l:closer . ' ' l:closer_plug
         endif
+
         let l:opener = l:opener[-1:]
         let l:opener_plug = '<Plug>(PearTreeOpener_' . l:opener . ')'
         if !hasmapto(l:opener_plug, 'i')
             execute 'imap <buffer> ' . l:opener . ' ' l:opener_plug
         endif
     endfor
+
     if !hasmapto('<Plug>(PearTreeBackspace)', 'i')
         imap <buffer> <BS> <Plug>(PearTreeBackspace)
     endif

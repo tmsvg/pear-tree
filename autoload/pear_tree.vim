@@ -149,12 +149,12 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
 
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
     let l:has_wildcard = (l:idx != -1)
+
     if l:has_wildcard
         " Generate a hint to find openers faster when the pair contains a
         " wildcard. The {wildcard} is the wildcard string as it appears in the
         " closer, so it may be a trimmed version of the opener's wildcard.
-        let l:opener_hint = a:opener[:(l:idx)]
-        let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
+        let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
 
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
         let l:traverser = pear_tree#trie#Traverser(l:trie)
