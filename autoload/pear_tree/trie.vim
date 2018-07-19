@@ -140,7 +140,7 @@ function! pear_tree#trie#Traverser(trie) abort
                 let l:min_idx = l:idx
             endif
         endfor
-        let l:grandparents = filter(keys(l:self.root.children), 'l:self.root.GetChild(v:val).children != {}')
+        let l:grandparents = filter(keys(l:self.root.children), 'pear_tree#trie#GetChild(l:self.root, v:val).children != {}')
         let l:i = l:min_idx
         while l:i < a:end
             call l:self.StepOrReset(a:text[(l:i)])
@@ -271,7 +271,7 @@ function! pear_tree#trie#Traverser(trie) abort
     " end of a string or [-1, -1] if it exited early.
     function! l:obj.WeakTraverseBuffer(start_pos, end_pos) abort
         let l:pos = copy(a:start_pos)
-        while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) <= 0
+        while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
             let l:line = getline(l:pos[0])
             if l:self.StepToChild(l:line[l:pos[1]])
                 if l:self.AtEndOfString()

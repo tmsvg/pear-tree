@@ -20,6 +20,11 @@ endfunction
 
 
 function! pear_tree#insert_mode#OnInsertCharPre() abort
+    " Characters inserted by autocomplete are not caught by InsertCharPre,
+    " so the traverser must be corrected.
+    if pumvisible()
+        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [line('.'), col('.') - 1])
+    endif
     let b:current_column = col('.') + 1
     if !b:ignore
         call b:traverser.StepOrReset(v:char)
@@ -39,7 +44,7 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
         call b:traverser.Reset()
         call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
     elseif l:new_col > b:current_column
-        call b:traverser.TraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
+        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
     endif
     let b:current_column = l:new_col
     let b:current_line = l:new_line
@@ -185,6 +190,12 @@ endfunction
 
 " Called when pressing the last character in an opener string.
 function! pear_tree#insert_mode#TerminateOpener(char) abort
+    " Characters inserted by autocomplete are not caught by InsertCharPre,
+    " so the traverser misses. This function triggers before CursorMovedI and
+    " InsertCharPre, so the traverser must be corrected here.
+    if pumvisible()
+        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [line('.'), col('.') - 1])
+    endif
     if s:IsCloser(a:char)
         let l:opener_end = pear_tree#insert_mode#HandleCloser(a:char)
     else
