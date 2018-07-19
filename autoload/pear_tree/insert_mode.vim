@@ -59,8 +59,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
                 \ && !pear_tree#cursor#AtEndOfLine()
                 \ && l:next_char !~# '\s'
                 \ && l:next_char !=# l:closer
-                \ && !(has_key(pear_tree#Pairs(), l:prev_char)
-                    \ && pear_tree#GetRule(l:prev_char, 'closer') ==# l:next_char)
+                \ && pear_tree#GetSurroundingPair() == []
         return 0
     elseif !l:is_dumb && get(g:, 'pear_tree_smart_openers', get(b:, 'pear_tree_smart_openers', 0))
         " Get the first closer after the cursor not preceded by an opener.
