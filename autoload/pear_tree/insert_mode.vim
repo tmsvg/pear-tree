@@ -142,16 +142,12 @@ endfunction
 function! s:ShouldSkipCloser(char) abort
     if pear_tree#cursor#NextChar() !=# a:char
         return 0
+    elseif pear_tree#IsDumbPair(a:char)
+        return 1
+    elseif !get(g:, 'pear_tree_smart_closers', get(b:, 'pear_tree_smart_closers', 0))
+        return 1
     endif
-    if get(g:, 'pear_tree_smart_closers', get(b:, 'pear_tree_smart_closers', 0))
-        if pear_tree#IsDumbPair(a:char)
-            return 1
-        endif
-        for l:opener in keys(pear_tree#Pairs())
-            if pear_tree#GetRule(l:opener, 'closer') ==# a:char
-                break
-            endif
-        endfor
+    for l:opener in keys(filter(pear_tree#Pairs(), 'v:val.closer ==# a:char'))
         let l:not_in = pear_tree#GetRule(l:opener, 'not_in')
         let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, pear_tree#cursor#Position(), l:not_in)
         let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#cursor#Position(), l:not_in)
@@ -167,10 +163,11 @@ function! s:ShouldSkipCloser(char) abort
         endif
         let l:opener_pos = pear_tree#buffer#Search(l:opener, l:closer_pos, l:not_in)
         let l:opener_pos[1] -= 1
-        return l:opener_pos == [-1, -1] || pear_tree#IsBalancedOpener(l:opener, '', l:opener_pos) != [-1, -1]
-    else
-        return 1
-    endif
+        if l:opener_pos == [-1, -1] || pear_tree#IsBalancedOpener(l:opener, '', l:opener_pos) != [-1, -1]
+            return 1
+        endif
+    endfor
+    return 0
 endfunction
 
 

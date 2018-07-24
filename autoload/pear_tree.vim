@@ -16,7 +16,7 @@ let s:strings_to_expand = []
 
 
 function! pear_tree#Pairs() abort
-    return get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
+    return deepcopy(get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs')))
 endfunction
 
 
@@ -135,6 +135,7 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
             return [-1, -1]
         endif
     endwhile
+    return [-1, -1]
 endfunction
 
 
@@ -227,12 +228,10 @@ function! pear_tree#GetSurroundingPair() abort
     endif
     let l:closer = l:closer_traverser.GetString()
     let l:wildcard = l:closer_traverser.GetWildcardString()
-    for l:opener in keys(pear_tree#Pairs())
-        if pear_tree#GetRule(l:opener, 'closer') ==# l:closer
-            let l:pos = pear_tree#IsBalancedPair(l:opener, l:wildcard, l:start)
-            if l:pos[0] != -1
-                return [l:opener, l:closer, l:wildcard, l:pos]
-            endif
+    for l:opener in keys(filter(pear_tree#Pairs(), 'v:val.closer ==# l:closer'))
+        let l:pos = pear_tree#IsBalancedPair(l:opener, l:wildcard, l:start)
+        if l:pos[0] != -1
+            return [l:opener, l:closer, l:wildcard, l:pos]
         endif
     endfor
     return []
