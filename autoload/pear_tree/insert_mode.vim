@@ -212,7 +212,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
         endif
     elseif b:traverser.StepToChild(a:char) && b:traverser.AtEndOfString()
         let l:not_in = pear_tree#GetRule(b:traverser.GetString(), 'not_in')
-        if pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
+        if l:not_in != [] && pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
             call b:traverser.StepToParent()
             if b:traverser.AtWildcard()
                 " The terminating character should become part of the wildcard

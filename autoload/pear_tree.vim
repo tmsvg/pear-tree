@@ -197,7 +197,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
             let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:current_pos, l:not_in)
         endif
         if l:closer_pos[0] != -1
-                    \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + strlen(l:closer)], l:opener_pos) >= 0
+                    \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + strlen(l:closer) - 1], l:opener_pos) >= 0
                     \ && !(l:count != 0 && pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
             let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]

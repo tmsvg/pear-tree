@@ -114,7 +114,7 @@ function! pear_tree#trie#Traverser(trie) abort
     " Attempt to step to {char} in the trie. If this fails, or the traverser is
     " already at the end of the trie, reset the traverser.
     function! l:obj.StepOrReset(char) abort
-        if !l:self.StepToChild(a:char) || (l:self.AtEndOfString() && !l:self.AtWildcard())
+        if !l:self.StepToChild(a:char) || (l:self.current.children == {} && !l:self.AtWildcard())
             call l:self.Reset()
         endif
     endfunction
@@ -274,7 +274,7 @@ function! pear_tree#trie#Traverser(trie) abort
         while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
             let l:line = getline(l:pos[0])
             if l:self.StepToChild(l:line[l:pos[1]])
-                if l:self.AtEndOfString()
+                if l:self.current.children == {}
                     return l:pos
                 endif
             else
