@@ -190,7 +190,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                     endif
                     let l:search_pos[1] = l:search_pos[1] - 1
                 endwhile
-                let l:opener_pos = l:search_pos
+                let l:opener_pos = l:end_pos
             endif
         endif
         if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) > 0
@@ -204,7 +204,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         elseif l:opener_pos[0] != -1 && l:count != 0
             let l:count = l:count - 1
             if l:count == 0
-                return l:has_wildcard ? l:end_pos
+                return l:has_wildcard ? l:opener_pos
                                     \ : [l:opener_pos[0], l:opener_pos[1] + strlen(l:opener_hint) - 1]
             endif
             let l:current_pos = [l:opener_pos[0], l:opener_pos[1] - 1]
@@ -222,6 +222,7 @@ function! pear_tree#GetSurroundingPair() abort
     let l:closers = map(keys(pear_tree#Pairs()), 'pear_tree#GetRule(v:val, ''closer'')')
     let l:closer_trie = pear_tree#trie#New(l:closers)
     let l:closer_traverser = pear_tree#trie#Traverser(l:closer_trie)
+
     let l:start = l:closer_traverser.WeakTraverseBuffer([line('.'), col('.') - 1], pear_tree#buffer#End())
     if l:start[0] == -1
         return []
