@@ -29,9 +29,6 @@ function! pear_tree#insert_mode#OnInsertCharPre() abort
     if !b:ignore
         call b:traverser.StepOrReset(v:char)
     else
-        if b:traverser.AtWildcard()
-            let b:traverser.wildcard_string .= v:char
-        endif
         let b:ignore = b:ignore - 1
     endif
 endfunction
@@ -216,7 +213,15 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     elseif b:traverser.StepToChild(a:char) && b:traverser.AtEndOfString()
         let l:not_in = pear_tree#GetRule(b:traverser.GetString(), 'not_in')
         if pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
-            let b:ignore = b:ignore + 1
+            call b:traverser.StepToParent()
+            if b:traverser.AtWildcard()
+                " The terminating character should become part of the wildcard
+                " string if it is entered in a `not_in` syntax region.
+                let b:ignore = b:ignore + 1
+                let b:traverser.wildcard_string .= a:char
+            else
+                call b:traverser.Reset()
+            endif
         endif
         return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
     else
