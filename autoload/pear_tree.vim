@@ -39,8 +39,6 @@ function! pear_tree#GenerateCloser(opener, wildcard, position) abort
     if (a:position[0] > 0 && l:not_in != []
                 \ && pear_tree#buffer#SyntaxRegion(a:position) =~? join(l:not_in, '\|'))
         return ''
-    elseif index(pear_tree#GetRule(a:opener, 'not_if'), a:wildcard) > -1
-        return ''
     endif
     let l:closer = pear_tree#GetRule(a:opener, 'closer')
     if a:wildcard ==# ''
@@ -55,9 +53,12 @@ function! pear_tree#GenerateCloser(opener, wildcard, position) abort
             return ''
         endif
     endif
-    let l:index = max([-1, l:index - 1])
+    let l:trimmed_wildcard = a:wildcard[:max([-1, l:index - 1])]
+    if index(pear_tree#GetRule(a:opener, 'not_if'), l:trimmed_wildcard) > -1
+        return ''
+    endif
     " Replace unescaped * chars with the wildcard string.
-    return pear_tree#string#Encode(l:closer, '*', a:wildcard[:(l:index)])
+    return pear_tree#string#Encode(l:closer, '*', l:trimmed_wildcard)
 endfunction
 
 
