@@ -71,25 +71,21 @@ endfunction
 function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
+    " Generate a hint to find openers faster when the pair contains a
+    " wildcard. The {wildcard} is the wildcard string as it appears in the
+    " closer, so it may be a trimmed version of the opener's wildcard.
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
+    let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
+
     let l:has_wildcard = (l:idx != -1)
     if l:has_wildcard
-        " Generate a hint to find openers faster when the pair contains a
-        " wildcard. The {wildcard} is the wildcard string as it appears in the
-        " closer, so it may be a trimmed version of the opener's wildcard.
-        let l:opener_hint = a:opener[:pear_tree#string#UnescapedStridx(a:opener, '*')]
-        let l:opener_hint = pear_tree#string#Encode(l:opener_hint, '*', a:wildcard)
-
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
         let l:traverser = pear_tree#trie#Traverser(l:trie)
-    else
-        " Unescape asterisks
-        let l:opener_hint = pear_tree#string#Encode(a:opener, '*', '')
     endif
+
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-
     let l:current_pos = a:start
     let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
     let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
@@ -122,7 +118,7 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
         endif
         if l:opener_pos != [-1, -1]
                     \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) <= 0
-                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:closer))
+                    \ && (l:count == 0 || !pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
             let l:current_pos = [l:opener_pos[0], l:opener_pos[1] + 1]
         elseif l:closer_pos != [-1, -1] && l:count != 0
@@ -149,21 +145,18 @@ endfunction
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
+    " Generate a hint to find openers faster when the pair contains a
+    " wildcard. The {wildcard} is the wildcard string as it appears in the
+    " closer, so it might be a trimmed version of the opener's wildcard.
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
+    let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
+
     let l:has_wildcard = (l:idx != -1)
-
     if l:has_wildcard
-        " Generate a hint to find openers faster when the pair contains a
-        " wildcard. The {wildcard} is the wildcard string as it appears in the
-        " closer, so it may be a trimmed version of the opener's wildcard.
-        let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
-
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
         let l:traverser = pear_tree#trie#Traverser(l:trie)
-    else
-        " Unescape asterisks
-        let l:opener_hint = pear_tree#string#Encode(a:opener, '*', '')
     endif
+
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
@@ -198,7 +191,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         endif
         if l:closer_pos[0] != -1
                     \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + strlen(l:closer) - 1], l:opener_pos) >= 0
-                    \ && !(l:count != 0 && pear_tree#IsDumbPair(l:closer))
+                    \ && (l:count == 0 || !pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
             let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]
         elseif l:opener_pos[0] != -1 && l:count != 0
@@ -281,15 +274,18 @@ endfunction
 
 
 function! pear_tree#PrepareExpansion() abort
-    let l:cursor_pos = pear_tree#cursor#Position()
-
+    let l:prev_char = pear_tree#cursor#PrevChar()
+    if filter(keys(pear_tree#Pairs()), 'v:val[-1:] ==# l:prev_char') == []
+        return "\<CR>"
+    endif
     let l:pair = pear_tree#GetSurroundingPair()
     if l:pair == []
         return "\<CR>"
     endif
+    let l:cursor_pos = pear_tree#cursor#Position()
     let [l:opener, l:closer, l:wildcard, l:opener_pos] = l:pair
     let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, l:cursor_pos)
-    if (l:opener_pos[0] == l:cursor_pos[0]) && (l:opener_pos[1] + 1 == l:cursor_pos[1] - 1)
+    if l:opener_pos[0] == l:cursor_pos[0] && l:opener_pos[1] == l:cursor_pos[1] - 2
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         call add(s:strings_to_expand, l:text_after_cursor)
         return repeat("\<Del>", pear_tree#string#VisualLength(l:text_after_cursor)) . "\<CR>"
@@ -301,15 +297,15 @@ endfunction
 
 function! pear_tree#Expand() abort
     if s:strings_to_expand == []
-        let l:ret_str = "\<Esc>"
+        return "\<Esc>"
     else
         let l:expanded_strings = join(reverse(s:strings_to_expand), "\<CR>")
-        let l:ret_str = repeat(s:RIGHT, col('$') - col('.')) . "\<CR>" . l:expanded_strings . "\<Esc>"
-        " Add movement back to correct position
-        let l:ret_str = l:ret_str . line('.') . 'gg' . col('.') . '|lh'
         let s:strings_to_expand = []
+        let [l:lnum, l:col] = pear_tree#cursor#Position()
+        return repeat(s:RIGHT, col('$') - l:col)
+                    \ . "\<CR>" . l:expanded_strings . "\<Esc>"
+                    \ . l:lnum . 'gg' . l:col . '|lh'
     endif
-    return l:ret_str
 endfunction
 
 

@@ -36,10 +36,9 @@ endif
 function! s:BufferEnable()
     if exists('b:pear_tree_enabled') && b:pear_tree_enabled
         return
-    endif
-    if exists('s:saved_mappings')
-        for l:map in keys(s:saved_mappings)
-            execute 'imap <buffer> ' . l:map . ' ' . s:saved_mappings[l:map]
+    elseif exists('s:saved_mappings')
+        for [l:map, l:map_arg] in items(s:saved_mappings)
+            execute 'imap <buffer> ' . l:map . ' ' . l:map_arg
         endfor
     else
         call s:CreatePlugMappings()
@@ -66,11 +65,8 @@ endfunction
 
 
 function! s:CreatePlugMappings()
-    let l:pairs = pear_tree#Pairs()
-    for l:opener in keys(l:pairs)
-        let l:closer = pear_tree#GetRule(l:opener, 'closer')
-        let l:opener = l:opener[-1:]
-
+    let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
+    for [l:opener, l:closer] in map(items(l:pairs), '[v:val[0][-1:], v:val[1].closer]')
         let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
         execute 'inoremap <silent> <expr> <buffer> '
                     \ . '<Plug>(PearTreeOpener_' . l:opener . ') '
@@ -95,14 +91,14 @@ endfunction
 
 
 function! s:MapDefaults()
-    for l:opener in keys(pear_tree#Pairs())
-        let l:closer = pear_tree#GetRule(l:opener, 'closer')
+    let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
+    for l:closer in map(values(l:pairs), 'v:val.closer')
         let l:closer_plug = '<Plug>(PearTreeCloser_' . l:closer . ')'
         if mapcheck(l:closer_plug, 'i') !=# '' && !hasmapto(l:closer_plug, 'i')
             execute 'imap <buffer> ' . l:closer . ' ' l:closer_plug
         endif
-
-        let l:opener = l:opener[-1:]
+    endfor
+    for l:opener in map(keys(l:pairs), 'v:val[-1:]')
         let l:opener_plug = '<Plug>(PearTreeOpener_' . l:opener . ')'
         if !hasmapto(l:opener_plug, 'i')
             execute 'imap <buffer> ' . l:opener . ' ' l:opener_plug

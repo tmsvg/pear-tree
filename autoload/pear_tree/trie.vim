@@ -101,7 +101,7 @@ function! pear_tree#trie#Traverser(trie) abort
             if l:node != {}
                 let l:self.current = l:node
                 let l:new_string = pear_tree#trie#Prefix(l:self.trie, l:self.current)
-                let l:self.wildcard_string = l:self.string[(strlen(l:new_string) - 1):]
+                let l:self.wildcard_string = l:self.string[strlen(l:new_string) - 1:]
                 let l:self.string = l:new_string
                 return l:self.StepToChild(a:char)
             else
@@ -131,26 +131,23 @@ function! pear_tree#trie#Traverser(trie) abort
         " character of the string. Unnecessary resets can be avoided by
         " starting at the smallest of these indices.
         let l:min_idx = a:end
-        for l:str in pear_tree#trie#Strings(l:self.trie)
-            if strlen(l:str) == 1
-                continue
-            endif
+        for l:str in filter(pear_tree#trie#Strings(l:self.trie), 'strlen(v:val) > 1')
             let l:idx = stridx(a:text, l:str[0], strridx(a:text, l:str[strlen(l:str) - 1], a:end - 1))
             if l:idx < l:min_idx && l:idx >= a:start
                 let l:min_idx = l:idx
             endif
         endfor
-        let l:grandparents = filter(keys(l:self.root.children), 'pear_tree#trie#GetChild(l:self.root, v:val).children != {}')
+        let l:grandparents = filter(copy(l:self.root.children), 'v:val.children != {}')
         let l:i = l:min_idx
         while l:i < a:end
-            call l:self.StepOrReset(a:text[(l:i)])
+            call l:self.StepOrReset(a:text[l:i])
             if l:self.AtWildcard()
                 let l:indices = [a:end] + pear_tree#string#FindAll(a:text, keys(l:self.current.children), l:i)
                 let l:end_of_wc = min(l:indices) - 1
                 let l:self.wildcard_string = l:self.wildcard_string . a:text[(l:i + 1):(l:end_of_wc)]
                 let l:i = l:end_of_wc + 1
             elseif l:self.AtRoot()
-                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, l:grandparents, l:i)
+                let l:indices = [a:end] + pear_tree#string#FindAll(a:text, keys(l:grandparents), l:i)
                 let l:i = max([l:i + 1, min(l:indices)])
             else
                 let l:i = l:i + 1
@@ -167,7 +164,7 @@ function! pear_tree#trie#Traverser(trie) abort
     function! l:obj.WeakTraverse(text, start, end) abort
         let l:i = a:start
         while l:i < a:end
-            if l:self.StepToChild(a:text[(l:i)])
+            if l:self.StepToChild(a:text[l:i])
                 if l:self.AtEndOfString()
                     return l:i
                 endif
@@ -202,12 +199,9 @@ function! pear_tree#trie#Traverser(trie) abort
         " starting at the smallest of these indices.
         let l:min_pos = copy(a:end_pos)
         let l:min_not_in = []
-        for l:str in pear_tree#trie#Strings(l:self.trie)
-            if strlen(l:str) == 1
-                continue
-            endif
+        for l:str in filter(pear_tree#trie#Strings(l:self.trie), 'strlen(v:val) > 1')
             let l:not_in = pear_tree#GetRule(l:str, 'not_in')
-            let l:prev_last_char = pear_tree#buffer#ReverseSearch(l:str[strlen(l:str) - 1], a:end_pos, l:not_in)
+            let l:prev_last_char = pear_tree#buffer#ReverseSearch(l:str[-1:], a:end_pos, l:not_in)
             let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_last_char, l:not_in)
             if l:search_pos == [-1, -1]
                 let l:search_pos = pear_tree#buffer#ReverseSearch(l:str[0], a:end_pos, l:not_in)
@@ -220,10 +214,10 @@ function! pear_tree#trie#Traverser(trie) abort
         endfor
         let l:pos = l:min_pos
         let l:not_in = l:min_not_in
-        let l:grandparents = filter(keys(l:self.root.children), 'pear_tree#trie#GetChild(l:self.root, v:val).children != {}')
+        let l:grandparents = filter(copy(l:self.root.children), 'v:val.children != {}')
         while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
             let l:line = getline(l:pos[0])
-            call l:self.StepOrReset(l:line[(l:pos[1])])
+            call l:self.StepOrReset(l:line[l:pos[1]])
             if l:self.AtWildcard()
                 " Skip to the earliest character that ends the wildcard sequence.
                 let l:positions = [a:end_pos]
@@ -238,17 +232,15 @@ function! pear_tree#trie#Traverser(trie) abort
                 if l:end_of_wildcard[0] == l:pos[0]
                     let l:self.wildcard_string .= l:line[l:pos[1] + 1:l:end_of_wildcard[1]]
                 else
-                    let l:self.wildcard_string .= l:line[(l:pos[1] + 1):]
-                    for l:line in getline(l:pos[0] + 1, l:end_of_wildcard[0] - 1)
-                        let l:self.wildcard_string = l:self.wildcard_string . l:line
-                    endfor
+                    let l:self.wildcard_string .= l:line[l:pos[1] + 1:]
+                    let l:self.wildcard_string .= join(getline(l:pos[0] + 1, l:end_of_wildcard[0] - 1), '')
                     let l:self.wildcard_string .= getline(l:end_of_wildcard[0])[:l:end_of_wildcard[1]]
                 endif
                 let l:pos = copy(l:end_of_wildcard)
                 let l:pos[1] = l:pos[1] + 1
             elseif l:self.AtRoot()
                 let l:positions = [a:end_pos]
-                for l:char in l:grandparents
+                for l:char in keys(l:grandparents)
                     let l:search_pos = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
                     if l:search_pos != [-1, -1]
                         call add(l:positions, l:search_pos)
@@ -301,16 +293,12 @@ function! pear_tree#trie#Traverser(trie) abort
                     let l:self.wildcard_string .= l:line[(l:pos[1] + 1):(l:end_of_wildcard[1])]
                 else
                     let l:self.wildcard_string .= l:line[(l:pos[1] + 1):]
-                    for l:line in getline(l:pos[0] + 1, l:end_of_wildcard[0] - 1)
-                        let l:self.wildcard_string .= l:line
-                    endfor
+                    let l:self.wildcard_string .= join(getline(l:pos[0] + 1, l:end_of_wildcard[0] - 1), '')
                     let l:self.wildcard_string .= getline(l:end_of_wildcard[0])[:(l:end_of_wildcard[1])]
                 endif
                 let l:pos = l:end_of_wildcard
-                let l:pos[1] = l:pos[1] + 1
-            else
-                let l:pos[1] = l:pos[1] + 1
             endif
+            let l:pos[1] = l:pos[1] + 1
         endwhile
         return [-1, -1]
     endfunction
