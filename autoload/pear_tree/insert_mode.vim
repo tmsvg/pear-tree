@@ -41,7 +41,7 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
         call b:traverser.Reset()
         call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
     elseif l:new_col > b:current_column
-        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column], [l:new_line, l:new_col - 1])
+        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
         if b:traverser.AtEndOfString()
             call b:traverser.Reset()
         endif
