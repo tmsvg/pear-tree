@@ -71,6 +71,17 @@ endfunction
 function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+
+    " The syntax region at {start} should always be included in searches.
+    call filter(l:not_in, 'pear_tree#buffer#SyntaxRegion(a:start) !~? v:val')
+
+    " It's not feasible to accurately determine if dumb pairs are balanced in
+    " the buffer, so do a simple check and leave quickly.
+    if pear_tree#IsDumbPair(a:opener)
+        return pear_tree#buffer#Search(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
+    endif
+
     " Generate a hint to find openers faster when the pair contains a
     " wildcard. The {wildcard} is the wildcard string as it appears in the
     " closer, so it may be a trimmed version of the opener's wildcard.
@@ -85,7 +96,6 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
 
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
-    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:current_pos = a:start
     let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
     let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
@@ -118,7 +128,6 @@ function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
         endif
         if l:opener_pos != [-1, -1]
                     \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) <= 0
-                    \ && (l:count == 0 || !pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
             let l:current_pos = [l:opener_pos[0], l:opener_pos[1] + 1]
         elseif l:closer_pos != [-1, -1] && l:count != 0
@@ -145,6 +154,18 @@ endfunction
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+
+    " The syntax region at {start} should always be included in searches.
+    call filter(l:not_in, 'pear_tree#buffer#SyntaxRegion(a:start) !~? v:val')
+
+    " It's not feasible to accurately determine if dumb pairs are balanced in
+    " the buffer, so do a simple check and leave quickly.
+    if pear_tree#IsDumbPair(a:opener)
+        echo pear_tree#buffer#ReverseSearch(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
+        return pear_tree#buffer#ReverseSearch(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
+    endif
+
     " Generate a hint to find openers faster when the pair contains a
     " wildcard. The {wildcard} is the wildcard string as it appears in the
     " closer, so it might be a trimmed version of the opener's wildcard.
@@ -159,7 +180,6 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
 
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
-    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:current_pos = a:start
     let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
     let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
@@ -191,7 +211,6 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         endif
         if l:closer_pos[0] != -1
                     \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + strlen(l:closer) - 1], l:opener_pos) >= 0
-                    \ && (l:count == 0 || !pear_tree#IsDumbPair(l:closer))
             let l:count = l:count + 1
             let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]
         elseif l:opener_pos[0] != -1 && l:count != 0
