@@ -162,7 +162,6 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     " It's not feasible to accurately determine if dumb pairs are balanced in
     " the buffer, so do a simple check and leave quickly.
     if pear_tree#IsDumbPair(a:opener)
-        echo pear_tree#buffer#ReverseSearch(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
         return pear_tree#buffer#ReverseSearch(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
     endif
 
