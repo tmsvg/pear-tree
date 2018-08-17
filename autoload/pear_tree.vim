@@ -96,8 +96,8 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:current_pos = a:start
-    let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
-    let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
+    let l:closer_pos = [a:start[0], a:start[1] + 1]
+    let l:opener_pos = [a:start[0], a:start[1] + 1]
     while l:current_pos[0] > -1
         " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) > 0
@@ -246,7 +246,7 @@ function! pear_tree#JumpOut() abort
         return ''
     endif
     let [l:opener, l:closer, l:wildcard] = l:pair[:2]
-    let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, pear_tree#cursor#Position())
+    let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, [0, 0])
     return repeat(s:RIGHT, pear_tree#string#VisualLength(l:closer))
 endfunction
 
