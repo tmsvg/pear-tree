@@ -51,6 +51,25 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
 endfunction
 
 
+" Return the position of the end of the innermost pair that surrounds {start}.
+function! s:GetEndOfSurroundingPair(opener, closer, start)
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+    let l:opener_pos = pear_tree#buffer#Search(a:opener, pear_tree#cursor#Position(), l:not_in)
+    let l:closer_pos = pear_tree#buffer#Search(a:closer, pear_tree#cursor#Position(), l:not_in)
+    while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                \ && l:opener_pos != [-1, -1]
+        let l:opener_pos[1] += 1
+        let l:closer_pos[1] += 1
+        let l:opener_pos = pear_tree#buffer#Search(a:opener, l:opener_pos, l:not_in)
+        let l:closer_pos = pear_tree#buffer#Search(a:closer, l:closer_pos, l:not_in)
+    endwhile
+    if l:opener_pos == [-1, -1]
+        let l:opener_pos = pear_tree#buffer#End()
+    endif
+    return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+endfunction
+
+
 " Define situations in which Pear Tree should close a simple opener.
 function! s:ShouldCloseSimpleOpener(char) abort
     let l:closer = pear_tree#GetRule(a:char, 'closer')
@@ -67,22 +86,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
                 \ && pear_tree#GetSurroundingPair() == []
         return 0
     elseif !l:is_dumb && get(g:, 'pear_tree_smart_openers', get(b:, 'pear_tree_smart_openers', 0))
-        " Get the first closer after the cursor not preceded by an opener.
-        let l:not_in = pear_tree#GetRule(a:char, 'not_in')
-
-        let l:opener_pos = pear_tree#buffer#Search(a:char, pear_tree#cursor#Position(), l:not_in)
-        let l:closer_pos = pear_tree#buffer#Search(l:closer, pear_tree#cursor#Position(), l:not_in)
-        while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                    \ && l:opener_pos != [-1, -1]
-            let l:opener_pos[1] += 1
-            let l:closer_pos[1] += 1
-            let l:opener_pos = pear_tree#buffer#Search(a:char, l:opener_pos, l:not_in)
-            let l:closer_pos = pear_tree#buffer#Search(l:closer, l:closer_pos, l:not_in)
-        endwhile
-        if l:opener_pos == [-1, -1]
-            let l:opener_pos = pear_tree#buffer#End()
-        endif
-        let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:opener_pos, l:not_in)
+        let l:closer_pos = s:GetEndOfSurroundingPair(a:char, l:closer, pear_tree#cursor#Position())
         return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
     else
         return 1
@@ -151,24 +155,10 @@ function! s:ShouldSkipCloser(char) abort
         return 1
     endif
     for l:opener in keys(filter(pear_tree#Pairs(), 'v:val.closer ==# a:char'))
-        " Get the first closer after the cursor not preceded by an opener.
-        let l:not_in = pear_tree#GetRule(l:opener, 'not_in')
-        let l:closer = a:char
-
-        let l:opener_pos = pear_tree#buffer#Search(l:opener, pear_tree#cursor#Position(), l:not_in)
-        let l:closer_pos = pear_tree#buffer#Search(l:closer, pear_tree#cursor#Position(), l:not_in)
-        while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                    \ && l:opener_pos != [-1, -1]
-            let l:opener_pos[1] += 1
-            let l:closer_pos[1] += 1
-            let l:opener_pos = pear_tree#buffer#Search(l:opener, l:opener_pos, l:not_in)
-            let l:closer_pos = pear_tree#buffer#Search(l:closer, l:closer_pos, l:not_in)
-        endwhile
-        if l:opener_pos == [-1, -1]
-            let l:opener_pos = pear_tree#buffer#End()
+        let l:closer_pos = s:GetEndOfSurroundingPair(l:opener, a:char, pear_tree#cursor#Position())
+        if l:closer_pos != [-1, -1] && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, 1) == [-1, -1]
+            return 1
         endif
-        let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:opener_pos, l:not_in)
-        return l:closer_pos != [-1, -1] && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, 1) == [-1, -1]
     endfor
     return 0
 endfunction
