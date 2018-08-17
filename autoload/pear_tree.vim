@@ -63,88 +63,6 @@ endfunction
 
 
 " Check if {opener} is balanced in the buffer. If it is, return the position
-" at which the pair was determined to be balanced. Otherwise, return [-1, -1].
-"
-" An optional argument {skip_count} tells the function to ignore the first
-" {skip_count} openers. This can be used to see if the closer at {start}
-" would be balanced if the previous {skip_count} openers were deleted.
-function! pear_tree#IsBalancedOpener(opener, wildcard, start, ...) abort
-    let l:count = a:0 ? a:1 : 0
-
-    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-
-    " The syntax region at {start} should always be included in searches.
-    call filter(l:not_in, 'pear_tree#buffer#SyntaxRegion(a:start) !~? v:val')
-
-    " It's not feasible to accurately determine if dumb pairs are balanced in
-    " the buffer, so do a simple check and leave quickly.
-    if pear_tree#IsDumbPair(a:opener)
-        return pear_tree#buffer#Search(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
-    endif
-
-    " Generate a hint to find openers faster when the pair contains a
-    " wildcard. The {wildcard} is the wildcard string as it appears in the
-    " closer, so it may be a trimmed version of the opener's wildcard.
-    let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
-    let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
-
-    let l:has_wildcard = (l:idx != -1)
-    if l:has_wildcard
-        let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
-        let l:traverser = pear_tree#trie#Traverser(l:trie)
-    endif
-
-    let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
-
-    let l:current_pos = a:start
-    let l:closer_pos = [l:current_pos[0], l:current_pos[1] + 1]
-    let l:opener_pos = [l:current_pos[0], l:current_pos[1] + 1]
-    while l:current_pos[0] != -1
-        " Find the previous opener and closer in the buffer.
-        if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) < 0
-            if !l:has_wildcard
-                let l:opener_pos = pear_tree#buffer#Search(a:opener, l:current_pos, l:not_in)
-            else
-                " Find the opener hint and ensure it points to a valid opener.
-                let l:search_pos = [l:current_pos[0], l:current_pos[1]]
-                while l:search_pos[0] != -1
-                    let l:search_pos = pear_tree#buffer#Search(l:opener_hint, l:search_pos)
-                    if l:search_pos == [-1, -1]
-                        break
-                    endif
-                    let l:end_pos = pear_tree#buffer#Search(a:opener[-1:], l:search_pos)
-                    call l:traverser.Reset()
-                    if l:traverser.WeakTraverseBuffer(l:search_pos, l:end_pos)[0] != -1
-                                \ && pear_tree#GenerateCloser(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:closer
-                        break
-                    endif
-                    let l:search_pos[1] = l:search_pos[1] + 1
-                endwhile
-                let l:opener_pos = l:search_pos
-            endif
-        endif
-        if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) < 0
-            let l:closer_pos = pear_tree#buffer#Search(l:closer, l:current_pos, l:not_in)
-        endif
-        if l:opener_pos != [-1, -1]
-                    \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) <= 0
-            let l:count = l:count + 1
-            let l:current_pos = [l:opener_pos[0], l:opener_pos[1] + 1]
-        elseif l:closer_pos != [-1, -1] && l:count != 0
-            let l:count = l:count - 1
-            if l:count == 0
-                return l:closer_pos
-            endif
-            let l:current_pos = [l:closer_pos[0], l:closer_pos[1] + 1]
-        else
-            return [-1, -1]
-        endif
-    endwhile
-    return [-1, -1]
-endfunction
-
-
-" Check if {opener} is balanced in the buffer. If it is, return the position
 " of the final character of the opener that balances the pair. If the pair is
 " unbalanced, return [-1, -1].
 "
@@ -155,7 +73,6 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-
     " The syntax region at {start} should always be included in searches.
     call filter(l:not_in, 'pear_tree#buffer#SyntaxRegion(a:start) !~? v:val')
 
@@ -165,9 +82,8 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         return pear_tree#buffer#ReverseSearch(a:opener, [a:start[0], a:start[1] - 1], l:not_in)
     endif
 
-    " Generate a hint to find openers faster when the pair contains a
-    " wildcard. The {wildcard} is the wildcard string as it appears in the
-    " closer, so it might be a trimmed version of the opener's wildcard.
+    " Generate a hint to find openers faster. Since {wildcard} is obtained
+    " from the closer, it might be a trimmed version of the opener's.
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
     let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
 
@@ -185,15 +101,10 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     while l:current_pos[0] > -1
         " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) > 0
-            if !l:has_wildcard
-                let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_pos, l:not_in)
-            else
-                " Search for the opener hint and ensure it is a valid opener.
-                let l:search_pos = [l:current_pos[0], l:current_pos[1]]
+            if l:has_wildcard
+                let l:search_pos = copy(l:current_pos)
                 while l:search_pos[0] > -1
                     call l:traverser.Reset()
-                    " Don't worry about `not_in` regions for the search. The
-                    " traverser will handle them.
                     let l:search_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:search_pos)
                     let l:end_pos = l:traverser.WeakTraverseBuffer(l:search_pos, l:opener_pos)
                     if l:end_pos[0] != -1
@@ -203,6 +114,8 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                     let l:search_pos[1] = l:search_pos[1] - 1
                 endwhile
                 let l:opener_pos = l:end_pos
+            else
+                let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_pos, l:not_in)
             endif
         endif
         if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) > 0

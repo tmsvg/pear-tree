@@ -151,24 +151,24 @@ function! s:ShouldSkipCloser(char) abort
         return 1
     endif
     for l:opener in keys(filter(pear_tree#Pairs(), 'v:val.closer ==# a:char'))
+        " Get the first closer after the cursor not preceded by an opener.
         let l:not_in = pear_tree#GetRule(l:opener, 'not_in')
-        let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, pear_tree#cursor#Position(), l:not_in)
-        let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, pear_tree#cursor#Position(), l:not_in)
+        let l:closer = a:char
+
+        let l:opener_pos = pear_tree#buffer#Search(l:opener, pear_tree#cursor#Position(), l:not_in)
+        let l:closer_pos = pear_tree#buffer#Search(l:closer, pear_tree#cursor#Position(), l:not_in)
         while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                    \ && l:closer_pos != [-1, -1]
-            let l:opener_pos[1] -= 1
-            let l:closer_pos[1] -= 1
-            let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener, l:opener_pos, l:not_in)
-            let l:closer_pos = pear_tree#buffer#ReverseSearch(a:char, l:closer_pos, l:not_in)
+                    \ && l:opener_pos != [-1, -1]
+            let l:opener_pos[1] += 1
+            let l:closer_pos[1] += 1
+            let l:opener_pos = pear_tree#buffer#Search(l:opener, l:opener_pos, l:not_in)
+            let l:closer_pos = pear_tree#buffer#Search(l:closer, l:closer_pos, l:not_in)
         endwhile
-        if l:closer_pos == [-1, -1]
-            let l:closer_pos = [1, 0]
+        if l:opener_pos == [-1, -1]
+            let l:opener_pos = pear_tree#buffer#End()
         endif
-        let l:opener_pos = pear_tree#buffer#Search(l:opener, l:closer_pos, l:not_in)
-        let l:opener_pos[1] -= 1
-        if l:opener_pos == [-1, -1] || pear_tree#IsBalancedOpener(l:opener, '', l:opener_pos) != [-1, -1]
-            return 1
-        endif
+        let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:opener_pos, l:not_in)
+        return l:closer_pos != [-1, -1] && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, 1) == [-1, -1]
     endfor
     return 0
 endfunction
