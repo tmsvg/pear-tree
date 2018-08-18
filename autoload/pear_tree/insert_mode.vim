@@ -12,7 +12,7 @@ function! pear_tree#insert_mode#Prepare() abort
         return
     endif
     let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
-    let b:traverser = pear_tree#trie#Traverser(l:trie)
+    let b:traverser = pear_tree#trie_traverser#New(l:trie)
     let b:current_line = line('.')
     let b:current_column = col('.')
     let b:ignore = 0

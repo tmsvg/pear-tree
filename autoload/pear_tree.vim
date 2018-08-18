@@ -90,7 +90,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:has_wildcard = (l:idx != -1)
     if l:has_wildcard
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
-        let l:traverser = pear_tree#trie#Traverser(l:trie)
+        let l:traverser = pear_tree#trie_traverser#New(l:trie)
     endif
 
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
@@ -145,7 +145,7 @@ endfunction
 function! pear_tree#GetSurroundingPair() abort
     let l:closers = map(keys(pear_tree#Pairs()), 'pear_tree#GetRule(v:val, ''closer'')')
     let l:closer_trie = pear_tree#trie#New(l:closers)
-    let l:closer_traverser = pear_tree#trie#Traverser(l:closer_trie)
+    let l:closer_traverser = pear_tree#trie_traverser#New(l:closer_trie)
 
     let l:start = l:closer_traverser.WeakTraverseBuffer([line('.'), col('.') - 1], pear_tree#buffer#End())
     if l:start[0] == -1
