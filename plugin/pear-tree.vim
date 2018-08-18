@@ -126,7 +126,7 @@ command -bar PearTreeDisable call s:BufferDisable()
 augroup pear_tree
     autocmd!
     autocmd BufRead,BufNewFile *
-                \ if (index(g:pear_tree_ft_disabled, &filetype) == -1) |
+                \ if index(g:pear_tree_ft_disabled, &filetype) == -1 |
                 \       call <SID>BufferEnable() |
                 \ endif
     autocmd InsertEnter *

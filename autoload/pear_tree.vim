@@ -16,7 +16,7 @@ let s:strings_to_expand = []
 
 
 function! pear_tree#Pairs() abort
-    return deepcopy(get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs')))
+    return get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
 endfunction
 
 
@@ -153,7 +153,7 @@ function! pear_tree#GetSurroundingPair() abort
     endif
     let l:closer = l:closer_traverser.GetString()
     let l:wildcard = l:closer_traverser.GetWildcardString()
-    for l:opener in keys(filter(pear_tree#Pairs(), 'v:val.closer ==# l:closer'))
+    for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# l:closer'))
         let l:pos = pear_tree#IsBalancedPair(l:opener, l:wildcard, l:start)
         if l:pos[0] != -1
             return [l:opener, l:closer, l:wildcard, l:pos]
@@ -174,7 +174,7 @@ function! pear_tree#Backspace() abort
         let l:should_delete_both = 0
     elseif pear_tree#IsDumbPair(l:prev_char)
         let l:should_delete_both = 1
-    elseif get(g:, 'pear_tree_smart_backspace', get(b:, 'pear_tree_smart_backspace', 0))
+    elseif get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
         " Get the first closer after the cursor not preceded by an opener.
         let l:not_in = pear_tree#GetRule(l:prev_char, 'not_in')
 
@@ -213,9 +213,8 @@ function! pear_tree#PrepareExpansion() abort
     if l:pair == []
         return "\<CR>"
     endif
+    let l:opener_pos = l:pair[3]
     let l:cursor_pos = pear_tree#cursor#Position()
-    let [l:opener, l:closer, l:wildcard, l:opener_pos] = l:pair
-    let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, l:cursor_pos)
     if l:opener_pos[0] == l:cursor_pos[0] && l:opener_pos[1] == l:cursor_pos[1] - 2
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
         call add(s:strings_to_expand, l:text_after_cursor)

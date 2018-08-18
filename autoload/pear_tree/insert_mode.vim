@@ -52,7 +52,7 @@ endfunction
 
 
 " Return the position of the end of the innermost pair that surrounds {start}.
-function! s:GetEndOfSurroundingPair(opener, closer, start)
+function! s:GetEndOfSurroundingPair(opener, closer, start) abort
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:opener_pos = pear_tree#buffer#Search(a:opener, pear_tree#cursor#Position(), l:not_in)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, pear_tree#cursor#Position(), l:not_in)
@@ -85,7 +85,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
                 \ && l:next_char !=# l:closer
                 \ && pear_tree#GetSurroundingPair() == []
         return 0
-    elseif !l:is_dumb && get(g:, 'pear_tree_smart_openers', get(b:, 'pear_tree_smart_openers', 0))
+    elseif !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
         let l:closer_pos = s:GetEndOfSurroundingPair(a:char, l:closer, pear_tree#cursor#Position())
         return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
     else
@@ -151,10 +151,10 @@ function! s:ShouldSkipCloser(char) abort
         return 0
     elseif pear_tree#IsDumbPair(a:char)
         return 1
-    elseif !get(g:, 'pear_tree_smart_closers', get(b:, 'pear_tree_smart_closers', 0))
+    elseif !get(b:, 'pear_tree_smart_closers', get(g:, 'pear_tree_smart_closers', 0))
         return 1
     endif
-    for l:opener in keys(filter(pear_tree#Pairs(), 'v:val.closer ==# a:char'))
+    for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
         let l:closer_pos = s:GetEndOfSurroundingPair(l:opener, a:char, pear_tree#cursor#Position())
         if l:closer_pos != [-1, -1] && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, 1) == [-1, -1]
             return 1

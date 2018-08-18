@@ -44,11 +44,7 @@ endfunction
 
 
 function! pear_tree#trie#Strings(trie) abort
-    let l:strings = []
-    for l:node in a:trie.leaves
-        call add(l:strings, pear_tree#trie#Prefix(a:trie, l:node))
-    endfor
-    return l:strings
+    return map(copy(a:trie.leaves), 'pear_tree#trie#Prefix(a:trie, v:val)')
 endfunction
 
 
@@ -210,10 +206,10 @@ function! pear_tree#trie#Traverser(trie) abort
             endif
             if l:self.AtWildcard()
                 let l:positions = [a:end_pos]
+                let l:str = pear_tree#trie#Prefix(l:self.trie, l:self.current)
                 for l:char in keys(l:self.current.children)
-                    let l:str = pear_tree#trie#Prefix(l:self.trie, pear_tree#trie#GetChild(l:self.current, l:char))
-                    if has_key(pear_tree#Pairs(), l:str)
-                        let l:not_in = pear_tree#GetRule(l:str, 'not_in')
+                    if has_key(pear_tree#Pairs(), l:str . l:char)
+                        let l:not_in = pear_tree#GetRule(l:str . l:char, 'not_in')
                     else
                         let l:not_in = []
                     endif
