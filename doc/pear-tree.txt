@@ -48,8 +48,8 @@ Default: >
     \   '(': {'closer': ')'},
     \   '[': {'closer': ']'},
     \   '{': {'closer': '}'},
-    \   "'": {'closer': "'", 'not_in': ['String']},
-    \   '"': {'closer': '"', 'not_in': ['String']}
+    \   "'": {'closer': "'"},
+    \   '"': {'closer': '"'}
     \ }
 <
 Define the opening strings and the closers with which they are to be

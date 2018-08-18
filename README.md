@@ -235,8 +235,8 @@ let g:pear_tree_pairs = {
             \ '(': {'closer': ')'},
             \ '[': {'closer': ']'},
             \ '{': {'closer': '}'},
-            \ "'": {'closer': "'", 'not_in': ['String']},
-            \ '"': {'closer': '"', 'not_in': ['String']}
+            \ "'": {'closer': "'"},
+            \ '"': {'closer': '"'}
             \ }
 " See pear-tree/ftplugin/ for filetype-specific matching rules
 ```
