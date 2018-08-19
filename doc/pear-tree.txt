@@ -286,7 +286,7 @@ To change the default mapping, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                         *<Plug>(PearTreeJump)*
-Default: `<C-l>`
+Default: None
 
 If the cursor is before a closer whose opener appears earlier in the text,
 move the cursor past the closer.

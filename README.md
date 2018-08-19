@@ -179,7 +179,7 @@ A Pear Tree rule includes several options to more finely tune its matching behav
         ```html
         1  <p class="Foo">Hello, world!</p>|
         ```
-    - Default mapping: `<C-l>`
+    - Default mapping: none
 
 - `<Plug>(PearTreeExpandOne)`
     - If `<Plug>(PearTreeExpand)` has been used multiple times, leading to nested pairs, add the innermost closer to its proper position.
@@ -251,9 +251,9 @@ let g:pear_tree_ft_disabled = []
 imap <BS> <Plug>(PearTreeBackspace)
 imap <CR> <Plug>(PearTreeExpand)
 imap <ESC> <Plug>(PearTreeFinishExpansion)
-imap <C-l> <Plug>(PearTreeJump)
 
 " Not mapped by default:
+" <Plug>(PearTreeJump)
 " <Plug>(PearTreeExpandOne)
 " <Plug>(PearTreeJNR)
 ```

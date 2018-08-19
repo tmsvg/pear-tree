@@ -114,9 +114,6 @@ function! s:MapDefaults()
     if !hasmapto('<Plug>(PearTreeFinishExpansion)', 'i')
         imap <buffer> <ESC> <Plug>(PearTreeFinishExpansion)
     endif
-    if !hasmapto('<Plug>(PearTreeJump)', 'i')
-        imap <buffer> <C-l> <Plug>(PearTreeJump)
-    endif
 endfunction
 
 
@@ -127,19 +124,19 @@ augroup pear_tree
     autocmd!
     autocmd BufRead,BufNewFile *
                 \ if index(g:pear_tree_ft_disabled, &filetype) == -1 |
-                \       call <SID>BufferEnable() |
+                \     call <SID>BufferEnable() |
                 \ endif
     autocmd InsertEnter *
                 \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
-                \       call pear_tree#insert_mode#Prepare() |
+                \     call pear_tree#insert_mode#Prepare() |
                 \ endif
     autocmd CursorMovedI,InsertEnter *
                 \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
-                \       call pear_tree#insert_mode#OnCursorMovedI() |
+                \     call pear_tree#insert_mode#OnCursorMovedI() |
                 \ endif
     autocmd InsertCharPre *
                 \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
-                \       call pear_tree#insert_mode#OnInsertCharPre() |
+                \     call pear_tree#insert_mode#OnInsertCharPre() |
                 \ endif
 augroup END
 
