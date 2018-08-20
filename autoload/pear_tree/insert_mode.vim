@@ -185,22 +185,12 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     endif
     if s:IsCloser(a:char)
         let l:opener_end = pear_tree#insert_mode#HandleCloser(a:char)
+    elseif has_key(pear_tree#Pairs(), a:char)
+        let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
         let l:opener_end = a:char
     endif
-    " If entered a simple (length of 1) opener and not currently typing
-    " a longer strict sequence, handle the trivial pair.
-    if has_key(pear_tree#Pairs(), a:char)
-                \ && (b:traverser.GetString() ==# ''
-                    \ || b:traverser.AtWildcard()
-                    \ || !pear_tree#trie#HasChild(b:traverser.GetCurrent(), a:char)
-                    \ )
-        if pear_tree#IsDumbPair(a:char)
-            return l:opener_end
-        else
-            return l:opener_end . pear_tree#insert_mode#CloseSimpleOpener(a:char)
-        endif
-    elseif b:traverser.StepToChild(a:char) && b:traverser.AtEndOfString()
+    if b:traverser.StepToChild(a:char) && b:traverser.AtEndOfString()
         let l:not_in = pear_tree#GetRule(b:traverser.GetString(), 'not_in')
         if l:not_in != [] && pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
             call b:traverser.StepToParent()
@@ -213,7 +203,10 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
                 call b:traverser.Reset()
             endif
         endif
-        return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
+        if strlen(b:traverser.GetString()) > 1
+            return a:char . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
+        endif
+        return l:opener_end
     else
         let b:ignore = b:ignore + 1
         return l:opener_end

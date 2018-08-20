@@ -70,23 +70,30 @@ endfunction
 " where both positions are given as a tuple of the form
 " [line_number, column_number].
 function! s:TraverseBuffer(start_pos, end_pos) dict abort
-    " An occurrence of the final character of a string means that any
-    " time the first character of the string occurs before it, the string
-    " is either complete or does not occur. In either case, the traverser
-    " would have to reset.
-    "
-    " For each string in the trie, find the index of the string's opening
-    " character that occurs after the most recent occurrence of the final
-    " character of the string. Unnecessary resets can be avoided by
-    " starting at the smallest of these indices.
+    " For each string in the trie, find the position of the string's opening
+    " character that occurs after the most recent complete occurrence of the
+    " string. By starting at the first of these positions, the amount of text
+    " that must be scanned can be greatly reduced.
     let l:min_pos = copy(a:end_pos)
     let l:min_not_in = []
     for l:str in filter(pear_tree#trie#Strings(l:self.trie), 'strlen(v:val) > 1')
         let l:not_in = pear_tree#GetRule(l:str, 'not_in')
-        let l:prev_last_char = pear_tree#buffer#ReverseSearch(l:str[-1:], a:end_pos, l:not_in)
-        let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_last_char, l:not_in)
-        if l:search_pos == [-1, -1]
-            let l:search_pos = pear_tree#buffer#ReverseSearch(l:str[0], a:end_pos, l:not_in)
+        if pear_tree#string#UnescapedStridx(l:str, '*') > -1
+            " An occurrence of the final character of a string with a wildcard
+            " part means that any time its first character appears before it,
+            " the string is either complete or does not occur. In either case,
+            " the traverser would have to reset.
+            let l:prev_str_pos = pear_tree#buffer#ReverseSearch(l:str[-1:], a:end_pos, l:not_in)
+            let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_str_pos, l:not_in)
+            if l:search_pos == [-1, -1]
+                let l:search_pos = pear_tree#buffer#ReverseSearch(l:str[0], a:end_pos, l:not_in)
+            endif
+        else
+            let l:prev_str_pos = pear_tree#buffer#ReverseSearch(l:str, a:end_pos, l:not_in)
+            if l:prev_str_pos == [-1, -1]
+                let l:prev_str_pos = [a:end_pos[0], max([a:end_pos[1] - strlen(l:str) - 1, 0])]
+            endif
+            let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_str_pos, l:not_in)
         endif
         if pear_tree#buffer#ComparePositions(l:search_pos, l:min_pos) < 0
                     \ && pear_tree#buffer#ComparePositions(l:search_pos, a:start_pos) >= 0
@@ -94,6 +101,7 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
             let l:min_pos = copy(l:search_pos)
         endif
     endfor
+
     let l:pos = l:min_pos
     let l:not_in = l:min_not_in
     let l:grandparents = filter(copy(l:self.trie.root.children), 'v:val.children != {}')
@@ -146,15 +154,27 @@ endfunction
 " end of a string or [-1, -1] if it exited early.
 function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
     let l:pos = copy(a:start_pos)
+    let l:end = [-1, -1]
+    let l:text = ''
     while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
         let l:line = getline(l:pos[0])
         if l:self.StepToChild(l:line[l:pos[1]])
-            if l:self.current.children == {}
-                return l:pos
+            if l:self.current.is_end_of_string
+                if l:self.current.children == {}
+                    return l:pos
+                else
+                    " Reached the end of a string, but it may be a substring
+                    " of a longer one. Remember this position, but don't stop.
+                    let l:text = pear_tree#string#Encode(l:self.string, '*', l:self.wildcard_string)
+                    let l:end = copy(l:pos)
+                endif
             endif
         else
             call l:self.Reset()
-            return [-1, -1]
+            for l:ch in split(l:text, '\zs')
+                call l:self.StepOrReset(l:ch)
+            endfor
+            return l:end
         endif
         if l:self.AtWildcard()
             let l:positions = [a:end_pos]
@@ -183,6 +203,7 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
         endif
         let l:pos[1] = l:pos[1] + 1
     endwhile
+    " Failed to reach the end of a string, but did not reset.
     return [-1, -1]
 endfunction
 
