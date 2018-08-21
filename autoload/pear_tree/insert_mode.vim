@@ -52,7 +52,7 @@ endfunction
 
 
 " Return the position of the end of the innermost pair that surrounds {start}.
-function! s:GetEndOfSurroundingPair(opener, closer, start) abort
+function! s:GetOuterPair(opener, closer, start) abort
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:opener_pos = pear_tree#buffer#Search(a:opener, pear_tree#cursor#Position(), l:not_in)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, pear_tree#cursor#Position(), l:not_in)
@@ -66,7 +66,11 @@ function! s:GetEndOfSurroundingPair(opener, closer, start) abort
     if l:opener_pos == [-1, -1]
         let l:opener_pos = pear_tree#buffer#End()
     endif
-    return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+    let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+    if pear_tree#buffer#ComparePositions(l:closer_pos, a:start) < 0
+        let l:closer_pos = [-1, -1]
+    endif
+    return l:closer_pos
 endfunction
 
 
@@ -87,7 +91,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
                 \ && pear_tree#GetSurroundingPair() == []
         return 0
     elseif !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
-        let l:closer_pos = s:GetEndOfSurroundingPair(a:char, l:closer, pear_tree#cursor#Position())
+        let l:closer_pos = s:GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1])
         return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
     else
         return 1
@@ -105,6 +109,32 @@ function! pear_tree#insert_mode#CloseSimpleOpener(char) abort
 endfunction
 
 
+function! s:GetOuterWildcardPair(opener, closer, wildcard, start) abort
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+    let l:traverser = deepcopy(b:traverser)
+    call l:traverser.Reset()
+    let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
+    let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
+    let l:opener_pos = [a:start[0], a:start[1] - 1]
+    let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+    while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                \ && l:opener_pos != [-1, -1]
+        let l:opener_pos[1] += 1
+        let l:closer_pos[1] += 1
+        while (l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1] || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard) !=# a:closer)
+                    \ && l:opener_pos[0] != -1
+            let l:opener_pos[1] += 1
+            let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, l:opener_pos)
+        endwhile
+        let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+    endwhile
+    if l:opener_pos == [-1, -1]
+        let l:opener_pos = pear_tree#buffer#End()
+    endif
+    return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+endfunction
+
+
 " Define situations in which Pear Tree should close a complex opener.
 " First, the wildcard string can span multiple lines, but the opener
 " should not be terminated when the terminating character is the only
@@ -118,23 +148,30 @@ endfunction
 " should not match.
 " If it is the first case, the cursor should also be at the end of the
 " line, before whitespace, or between another pair.
-function! s:ShouldCloseComplexOpener() abort
+function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
     if strlen(pear_tree#string#Trim(pear_tree#cursor#TextBefore())) == 0
         return 0
-    elseif pear_tree#cursor#AtEndOfLine()
+    elseif !(pear_tree#cursor#AtEndOfLine()
                 \ || pear_tree#cursor#NextChar() =~# '\s'
                 \ || has_key(pear_tree#Pairs(), pear_tree#cursor#NextChar())
-                \ || pear_tree#GetSurroundingPair() != []
-        return 1
-    else
+                \ || pear_tree#GetSurroundingPair() != [])
         return 0
+    elseif get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
+        if a:wildcard !=# ''
+            let l:closer_pos = s:GetOuterWildcardPair(a:opener, a:closer, a:wildcard, [line('.'), col('.') - 1])
+        else
+            let l:closer_pos = s:GetOuterPair(a:opener, a:closer, [line('.'), col('.') - 1])
+        endif
+        return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:opener, a:wildcard, l:closer_pos) != [-1, -1]
+    else
+        return 1
     endif
 endfunction
 
 
 function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard) abort
-    if s:ShouldCloseComplexOpener()
-        let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, pear_tree#cursor#Position())
+    let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, pear_tree#cursor#Position())
+    if s:ShouldCloseComplexOpener(a:opener, l:closer, a:wildcard)
         return l:closer . repeat(s:LEFT, pear_tree#string#VisualLength(l:closer))
     else
         return ''
@@ -156,7 +193,7 @@ function! s:ShouldSkipCloser(char) abort
         return 1
     endif
     for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
-        let l:closer_pos = s:GetEndOfSurroundingPair(l:opener, a:char, pear_tree#cursor#Position())
+        let l:closer_pos = s:GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1])
         if l:closer_pos != [-1, -1] && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, 1) == [-1, -1]
             return 1
         endif

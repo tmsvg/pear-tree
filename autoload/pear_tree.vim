@@ -81,6 +81,11 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
     let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
 
+    let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
+    if l:closer ==# ''
+        return a:start
+    endif
+
     let l:has_wildcard = (l:idx != -1)
     let l:is_dumb = pear_tree#IsDumbPair(a:opener)
 
@@ -88,8 +93,6 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
         let l:traverser = pear_tree#trie_traverser#New(l:trie)
     endif
-
-    let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, a:start)
 
     let l:current_pos = [a:start[0], a:start[1]]
     let l:closer_pos = [a:start[0], a:start[1] + 1]
