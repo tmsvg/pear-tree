@@ -89,10 +89,7 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
                 let l:search_pos = pear_tree#buffer#ReverseSearch(l:str[0], a:end_pos, l:not_in)
             endif
         else
-            let l:prev_str_pos = pear_tree#buffer#ReverseSearch(l:str, a:end_pos, l:not_in)
-            if l:prev_str_pos == [-1, -1]
-                let l:prev_str_pos = [a:end_pos[0], max([a:end_pos[1] - strlen(l:str) - 1, 0])]
-            endif
+            let l:prev_str_pos = [a:end_pos[0], max([a:end_pos[1] - strlen(l:str) - 1, 0])]
             let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_str_pos, l:not_in)
         endif
         if pear_tree#buffer#ComparePositions(l:search_pos, l:min_pos) < 0
