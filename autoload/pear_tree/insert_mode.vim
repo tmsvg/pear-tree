@@ -167,6 +167,7 @@ endfunction
 
 function! pear_tree#insert_mode#HandleCloser(char) abort
     if s:ShouldSkipCloser(a:char)
+        let b:ignore = b:ignore + 1
         return "\<Del>" . a:char
     elseif pear_tree#IsDumbPair(a:char)
         return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
@@ -207,9 +208,8 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
         if strlen(b:traverser.GetString()) > 1
             return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
         endif
-        return l:opener_end
     else
         let b:ignore = b:ignore + 1
-        return l:opener_end
     endif
+    return l:opener_end
 endfunction
