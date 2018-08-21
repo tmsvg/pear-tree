@@ -77,7 +77,8 @@ function! s:ShouldCloseSimpleOpener(char) abort
     let l:prev_char = pear_tree#cursor#PrevChar()
     let l:is_dumb = pear_tree#IsDumbPair(a:char)
 
-    if l:next_char =~# '\w' || (l:is_dumb && l:prev_char =~# '\w')
+    if l:next_char =~# '\w'
+                \ || (l:is_dumb && (l:prev_char =~# '\w' || l:prev_char ==# a:char))
         return 0
     elseif !pear_tree#cursor#OnEmptyLine()
                 \ && !pear_tree#cursor#AtEndOfLine()
@@ -204,7 +205,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             endif
         endif
         if strlen(b:traverser.GetString()) > 1
-            return a:char . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
+            return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
         endif
         return l:opener_end
     else
