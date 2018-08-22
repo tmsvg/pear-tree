@@ -83,13 +83,13 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
             " part means that any time its first character appears before it,
             " the string is either complete or does not occur. In either case,
             " the traverser would have to reset.
-            let l:prev_str_pos = pear_tree#buffer#ReverseSearch(l:str[-1:], a:end_pos, l:not_in)
+            let l:prev_str_pos = pear_tree#buffer#ReverseSearch(l:str[-1:], [a:end_pos[0], a:end_pos[1] - 1], l:not_in)
             let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_str_pos, l:not_in)
             if l:search_pos == [-1, -1]
                 let l:search_pos = pear_tree#buffer#ReverseSearch(l:str[0], a:end_pos, l:not_in)
             endif
         else
-            let l:prev_str_pos = [a:end_pos[0], max([a:end_pos[1] - strlen(l:str) - 1, 0])]
+            let l:prev_str_pos = [a:end_pos[0], max([a:end_pos[1] - strlen(l:str) - 2, 0])]
             let l:search_pos = pear_tree#buffer#Search(l:str[0], l:prev_str_pos, l:not_in)
         endif
         if pear_tree#buffer#ComparePositions(l:search_pos, l:min_pos) < 0

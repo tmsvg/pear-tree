@@ -41,9 +41,13 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
         call b:traverser.Reset()
         call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
     elseif l:new_col > b:current_column
-        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
-        if b:traverser.AtEndOfString()
-            call b:traverser.Reset()
+        if b:traverser.AtRoot()
+            call b:traverser.TraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
+        else
+            call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
+            if b:traverser.AtEndOfString()
+                call b:traverser.Reset()
+            endif
         endif
     endif
     let b:current_column = l:new_col
@@ -112,25 +116,25 @@ endfunction
 function! s:GetOuterWildcardPair(opener, closer, wildcard, start) abort
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:traverser = deepcopy(b:traverser)
-    call l:traverser.Reset()
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
     let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
-    let l:opener_pos = [a:start[0], a:start[1] - 1]
+    let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, a:start)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
-    while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                \ && l:opener_pos != [-1, -1]
+    while l:opener_pos != [-1, -1]
+                \ && (pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                \ || l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1]
+                \ || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
         let l:opener_pos[1] += 1
         let l:closer_pos[1] += 1
-        while (l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1] || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard) !=# a:closer)
-                    \ && l:opener_pos[0] != -1
-            let l:opener_pos[1] += 1
-            let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, l:opener_pos)
-        endwhile
-        let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+        let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, l:opener_pos)
+        if pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) > 0
+            let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+        endif
     endwhile
     if l:opener_pos == [-1, -1]
         let l:opener_pos = pear_tree#buffer#End()
     endif
+    let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
     return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
 endfunction
 
