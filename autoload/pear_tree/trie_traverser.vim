@@ -46,9 +46,14 @@ function! s:StepToChild(char) dict abort
         let l:node = l:self.Backtrack(l:self.trie.wildcard_symbol)
         if l:node != {}
             let l:self.current = l:node
+
             let l:new_string = pear_tree#trie#Prefix(l:self.trie, l:self.current)
-            let l:self.wildcard_string = l:self.string[strlen(l:new_string) - 1:]
+            let l:new_string_len = strlen(l:new_string)
+            let l:new_string = pear_tree#string#Encode(l:new_string, '*', l:self.trie.wildcard_symbol)
+
+            let l:self.wildcard_string = l:self.GetString()[l:new_string_len - 1:]
             let l:self.string = l:new_string
+
             return l:self.StepToChild(a:char)
         else
             return 0
