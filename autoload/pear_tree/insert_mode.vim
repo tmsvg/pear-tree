@@ -113,6 +113,9 @@ function! pear_tree#insert_mode#CloseSimpleOpener(char) abort
 endfunction
 
 
+" Return the position of the end of the innermost wildcard pair that surrounds
+" {start}. Note that {wildcard} must be the wildcard string as it appears in
+" {closer}, after the `until` rule has been applied.
 function! s:GetOuterWildcardPair(opener, closer, wildcard, start) abort
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:traverser = deepcopy(b:traverser)
@@ -161,12 +164,19 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
                 \ || pear_tree#GetSurroundingPair() != [])
         return 0
     elseif get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
+        let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
         if a:wildcard !=# ''
-            let l:closer_pos = s:GetOuterWildcardPair(a:opener, a:closer, a:wildcard, [line('.'), col('.') - 1])
+            let l:closer_pos = s:GetOuterWildcardPair(a:opener, a:closer, l:trimmed_wildcard, [line('.'), col('.') - 1])
         else
             let l:closer_pos = s:GetOuterPair(a:opener, a:closer, [line('.'), col('.') - 1])
         endif
-        return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:opener, a:wildcard, l:closer_pos) != [-1, -1]
+        " An {opener} may be complete in the buffer if a smaller pair surrounds
+        " it (e.g. <: > and <*>: </*>), even if the user has not finished
+        " typing it. When skipping a closer such as `>`, b:ignore should be 1.
+        " Use it to ignore the {opener} being typed when checking pair balance.
+        let l:ignore = min([1, b:ignore])
+        return pear_tree#buffer#ComparePositions(l:closer_pos, pear_tree#cursor#Position()) < 0
+                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore) != [-1, -1]
     else
         return 1
     endif

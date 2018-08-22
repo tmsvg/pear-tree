@@ -26,6 +26,20 @@ function! pear_tree#GetRule(opener, rule) abort
 endfunction
 
 
+function! pear_tree#TrimWildcard(opener, wildcard) abort
+    let l:until = pear_tree#GetRule(a:opener, 'until')
+    if l:until ==# ''
+        let l:index = strlen(a:wildcard)
+    else
+        let l:index = match(a:wildcard, l:until)
+        if l:index == 0
+            return ''
+        endif
+    endif
+    return a:wildcard[:max([-1, l:index - 1])]
+endfunction
+
+
 function! pear_tree#IsDumbPair(char) abort
     return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'closer') ==# a:char
 endfunction
@@ -44,16 +58,7 @@ function! pear_tree#GenerateCloser(opener, wildcard, position) abort
     if a:wildcard ==# ''
         return pear_tree#string#Encode(l:closer, '*', '')
     endif
-    let l:until = pear_tree#GetRule(a:opener, 'until')
-    if l:until ==# ''
-        let l:index = strlen(a:wildcard)
-    else
-        let l:index = match(a:wildcard, l:until)
-        if l:index == 0
-            return ''
-        endif
-    endif
-    let l:trimmed_wildcard = a:wildcard[:max([-1, l:index - 1])]
+    let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
     if index(pear_tree#GetRule(a:opener, 'not_if'), l:trimmed_wildcard) > -1
         return ''
     endif
