@@ -59,6 +59,9 @@ function! pear_tree#GenerateCloser(opener, wildcard, position) abort
         return pear_tree#string#Encode(l:closer, '*', '')
     endif
     let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
+    if l:trimmed_wildcard ==# ''
+        return ''
+    endif
     if index(pear_tree#GetRule(a:opener, 'not_if'), l:trimmed_wildcard) > -1
         return ''
     endif
