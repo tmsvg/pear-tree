@@ -1,3 +1,7 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
+
 function! s:ShouldSkip(position, skip_list) abort
     return a:skip_list != [] && pear_tree#buffer#SyntaxRegion(a:position) =~? join(a:skip_list, '\|')
 endfunction
@@ -60,3 +64,7 @@ endfunction
 function! pear_tree#buffer#SyntaxRegion(position) abort
     return synIDattr(synID(a:position[0], a:position[1], 1), 'name')
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo

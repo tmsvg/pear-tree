@@ -1,3 +1,6 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
 if v:version > 704 || (v:version == 704 && has('patch849'))
     let s:LEFT = "\<C-g>U" . "\<Left>"
     let s:RIGHT = "\<C-g>U" . "\<Right>"
@@ -221,7 +224,7 @@ function! pear_tree#insert_mode#Expand() abort
         let [l:lnum, l:col] = pear_tree#cursor#Position()
         return repeat(s:RIGHT, col('$') - l:col)
                     \ . "\<CR>" . l:expanded_strings . "\<Esc>"
-                    \ . l:lnum . 'gg' . l:col . '|lh'
+                    \ . ':call cursor(' . string([l:lnum, max([l:col - 1, 1])]) . ')' . "\<CR>"
     endif
 endfunction
 
@@ -286,3 +289,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     endif
     return l:opener_end
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo

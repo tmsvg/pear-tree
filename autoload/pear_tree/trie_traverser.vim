@@ -1,3 +1,7 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
+
 function! pear_tree#trie_traverser#New(trie) abort
     let l:obj = {'trie': a:trie,
                \ 'current': a:trie.root,
@@ -267,3 +271,7 @@ endfunction
 function! s:GetWildcardString() dict abort
     return l:self.wildcard_string
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo

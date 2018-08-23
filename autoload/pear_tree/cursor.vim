@@ -1,3 +1,7 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
+
 function! pear_tree#cursor#Position() abort
     return [line('.'), col('.')]
 endfunction
@@ -36,3 +40,7 @@ endfunction
 function! pear_tree#cursor#SyntaxRegion() abort
     return synIDattr(synIDtrans(synID(line('.'), col('.'), 1)), 'name')
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo

@@ -1,3 +1,6 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
 let s:pear_tree_default_rules = {
             \ 'closer': '',
             \ 'not_in': [],
@@ -232,3 +235,7 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
     let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
     return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo

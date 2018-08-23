@@ -1,4 +1,4 @@
-if exists('g:loaded_pear_tree') || v:version < 704 || &compatible
+if exists('g:loaded_pear_tree') || v:version < 704
     finish
 endif
 let g:loaded_pear_tree = 1
@@ -105,6 +105,10 @@ function! s:MapDefaults()
         endif
     endfor
 
+    " Stop here if special keys aren't mappable.
+    if stridx(&cpoptions, '<') > -1
+        return
+    endif
     if !hasmapto('<Plug>(PearTreeBackspace)', 'i')
         imap <buffer> <BS> <Plug>(PearTreeBackspace)
     endif

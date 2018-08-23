@@ -1,3 +1,7 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
+
 function! s:TrieNode(char) abort
     return {'char': a:char,
           \ 'children': {},
@@ -65,3 +69,7 @@ endfunction
 function! pear_tree#trie#HasChild(trie_node, char) abort
     return has_key(a:trie_node.children, a:char)
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo

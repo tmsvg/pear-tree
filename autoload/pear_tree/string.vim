@@ -1,3 +1,7 @@
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
+
 " Return {string} with all leading a trailing whitespace removed.
 function! pear_tree#string#Trim(string) abort
     let l:start = 0
@@ -82,3 +86,7 @@ function! pear_tree#string#FindAll(text, strings, start) abort
     endfor
     return l:indices
 endfunction
+
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo
