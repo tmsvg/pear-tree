@@ -12,8 +12,6 @@ else
     let s:RIGHT = "\<Right>"
 endif
 
-let s:strings_to_expand = []
-
 
 function! pear_tree#Pairs() abort
     return get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
@@ -23,6 +21,16 @@ endfunction
 function! pear_tree#GetRule(opener, rule) abort
     let l:rules = get(pear_tree#Pairs(), a:opener)
     return get(l:rules, a:rule, s:pear_tree_default_rules[a:rule])
+endfunction
+
+
+function! pear_tree#IsDumbPair(char) abort
+    return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'closer') ==# a:char
+endfunction
+
+
+function! pear_tree#IsCloser(str) abort
+    return index(map(values(pear_tree#Pairs()), 'v:val.closer'), a:str) > -1
 endfunction
 
 
@@ -37,11 +45,6 @@ function! pear_tree#TrimWildcard(opener, wildcard) abort
         endif
     endif
     return a:wildcard[:max([-1, l:index - 1])]
-endfunction
-
-
-function! pear_tree#IsDumbPair(char) abort
-    return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'closer') ==# a:char
 endfunction
 
 
@@ -179,101 +182,53 @@ function! pear_tree#GetSurroundingPair() abort
 endfunction
 
 
-function! pear_tree#Backspace() abort
-    let l:prev_char = pear_tree#cursor#PrevChar()
-    if !has_key(pear_tree#Pairs(), l:prev_char)
-        return "\<BS>"
+" Return the position of the end of the innermost pair that surrounds {start}.
+function! pear_tree#GetOuterPair(opener, closer, start) abort
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+    let l:opener_pos = pear_tree#buffer#Search(a:opener, pear_tree#cursor#Position(), l:not_in)
+    let l:closer_pos = pear_tree#buffer#Search(a:closer, pear_tree#cursor#Position(), l:not_in)
+    while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                \ && l:opener_pos != [-1, -1]
+        let l:opener_pos[1] += 1
+        let l:closer_pos[1] += 1
+        let l:opener_pos = pear_tree#buffer#Search(a:opener, l:opener_pos, l:not_in)
+        let l:closer_pos = pear_tree#buffer#Search(a:closer, l:closer_pos, l:not_in)
+    endwhile
+    if l:opener_pos == [-1, -1]
+        let l:opener_pos = pear_tree#buffer#End()
     endif
-    let l:next_char = pear_tree#cursor#NextChar()
+    let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+    if pear_tree#buffer#ComparePositions(l:closer_pos, a:start) < 0
+        let l:closer_pos = [-1, -1]
+    endif
+    return l:closer_pos
+endfunction
 
-    if pear_tree#GetRule(l:prev_char, 'closer') !=# l:next_char
-        let l:should_delete_both = 0
-    elseif pear_tree#IsDumbPair(l:prev_char)
-        let l:should_delete_both = 1
-    elseif get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
-        " Get the first closer after the cursor not preceded by an opener.
-        let l:not_in = pear_tree#GetRule(l:prev_char, 'not_in')
 
-        let l:opener_pos = pear_tree#buffer#Search(l:prev_char, pear_tree#cursor#Position(), l:not_in)
-        let l:closer_pos = pear_tree#buffer#Search(l:next_char, pear_tree#cursor#Position(), l:not_in)
-        while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                    \ && l:opener_pos != [-1, -1]
-            let l:opener_pos[1] += 1
-            let l:closer_pos[1] += 1
-            let l:opener_pos = pear_tree#buffer#Search(l:prev_char, l:opener_pos, l:not_in)
-            let l:closer_pos = pear_tree#buffer#Search(l:next_char, l:closer_pos, l:not_in)
-        endwhile
-        if l:opener_pos == [-1, -1]
-            let l:opener_pos = pear_tree#buffer#End()
+" Return the position of the end of the innermost wildcard pair that surrounds
+" {start}. Note that {wildcard} must be the wildcard string as it appears in
+" {closer}, after the `until` rule has been applied.
+function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
+    let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
+    let l:traverser = deepcopy(b:traverser)
+    let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
+    let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
+    let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, a:start)
+    let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+    while l:opener_pos != [-1, -1]
+                \ && (pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                \ || l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1]
+                \ || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
+        let l:opener_pos[1] += 1
+        let l:closer_pos[1] += 1
+        let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, l:opener_pos)
+        if pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) > 0
+            let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
         endif
-        let l:closer_pos = pear_tree#buffer#ReverseSearch(l:next_char, l:opener_pos, l:not_in)
-        " Will deleting both make the next closer unbalanced?
-        let l:should_delete_both = (pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, 1) == [-1, -1])
-    else
-        let l:should_delete_both = 1
+    endwhile
+    if l:opener_pos == [-1, -1]
+        let l:opener_pos = pear_tree#buffer#End()
     endif
-    if l:should_delete_both
-        return "\<Del>\<BS>"
-    else
-        return "\<BS>"
-    endif
-endfunction
-
-
-function! pear_tree#PrepareExpansion() abort
-    let l:prev_char = pear_tree#cursor#PrevChar()
-    if filter(keys(pear_tree#Pairs()), 'v:val[-1:] ==# l:prev_char') == []
-        return "\<CR>"
-    endif
-    let l:pair = pear_tree#GetSurroundingPair()
-    if l:pair == []
-        return "\<CR>"
-    endif
-    let l:opener_pos = l:pair[3]
-    let l:cursor_pos = pear_tree#cursor#Position()
-    if l:opener_pos[0] == l:cursor_pos[0] && l:opener_pos[1] == l:cursor_pos[1] - 2
-        let l:text_after_cursor = pear_tree#cursor#TextAfter()
-        call add(s:strings_to_expand, l:text_after_cursor)
-        return repeat("\<Del>", pear_tree#string#VisualLength(l:text_after_cursor)) . "\<CR>"
-    else
-        return "\<CR>"
-    endif
-endfunction
-
-
-function! pear_tree#Expand() abort
-    if s:strings_to_expand == []
-        return "\<Esc>"
-    else
-        let l:expanded_strings = join(reverse(s:strings_to_expand), "\<CR>")
-        let s:strings_to_expand = []
-        let [l:lnum, l:col] = pear_tree#cursor#Position()
-        return repeat(s:RIGHT, col('$') - l:col)
-                    \ . "\<CR>" . l:expanded_strings . "\<Esc>"
-                    \ . l:lnum . 'gg' . l:col . '|lh'
-    endif
-endfunction
-
-
-function! pear_tree#JumpOut() abort
-    let l:pair = pear_tree#GetSurroundingPair()
-    if l:pair == []
-        return ''
-    endif
-    let [l:opener, l:closer, l:wildcard] = l:pair[:2]
-    let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, [0, 0])
-    return repeat(s:RIGHT, pear_tree#string#VisualLength(l:closer))
-endfunction
-
-
-function! pear_tree#JumpNReturn() abort
-    return pear_tree#JumpOut() . "\<CR>"
-endfunction
-
-
-function! pear_tree#ExpandOne() abort
-    if s:strings_to_expand == []
-        return ''
-    endif
-    return remove(s:strings_to_expand, -1)
+    let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+    return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
 endfunction

@@ -81,12 +81,12 @@ function! s:CreatePlugMappings()
                         \ . l:escaped_closer . ''')'
         endif
     endfor
-    inoremap <silent> <expr> <Plug>(PearTreeBackspace) pear_tree#Backspace()
-    inoremap <silent> <expr> <Plug>(PearTreeJump) pear_tree#JumpOut()
-    inoremap <silent> <expr> <Plug>(PearTreeJNR) pear_tree#JumpNReturn()
-    inoremap <silent> <expr> <Plug>(PearTreeExpand) pear_tree#PrepareExpansion()
-    inoremap <silent> <expr> <Plug>(PearTreeExpandOne) pear_tree#ExpandOne()
-    inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#Expand()
+    inoremap <silent> <expr> <Plug>(PearTreeBackspace) pear_tree#insert_mode#Backspace()
+    inoremap <silent> <expr> <Plug>(PearTreeJump) pear_tree#insert_mode#JumpOut()
+    inoremap <silent> <expr> <Plug>(PearTreeJNR) pear_tree#insert_mode#JumpNReturn()
+    inoremap <silent> <expr> <Plug>(PearTreeExpand) pear_tree#insert_mode#PrepareExpansion()
+    inoremap <silent> <expr> <Plug>(PearTreeExpandOne) pear_tree#insert_mode#ExpandOne()
+    inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#insert_mode#Expand()
 endfunction
 
 
