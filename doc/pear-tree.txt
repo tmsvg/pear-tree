@@ -9,8 +9,8 @@ Contents                                                           *pear-tree*
 ==============================================================================
 1. Introduction                                       *pear-tree-introduction*
 
-Pear Tree automatically pairs braces, quotes, HTML tags, and many other text
-items based on a simple-to-define set of rules, and provides pair-wise
+Pear Tree automatically pairs parentheses, quotes, HTML tags, and many other
+text items based on a simple-to-define set of rules, and provides pair-wise
 deletion, newline expansion, and other usual auto-pair features.
 
 Pear Tree aims to be non-intrusive and does not break Vim's built-in
@@ -203,11 +203,11 @@ Default: varies
 
 A `<Plug>` mapping is created for each opener in the |b:pear_tree_pairs|
 dictionary. The mapping is of the form `<Plug>(PearTreeOpener_x)` where x is
-the final character of the opener string. It is used to trigger autopairing
+the final character of the opener string. It is used to trigger auto-pairing
 behavior for the corresponding opener.
 
-To use a different key mapping to trigger the autopair behavior for an opener,
-add something like the following to your vimrc:
+To use a different key mapping to trigger auto-pairing for an opener, add
+something like the following to your vimrc:
 >
     imap <leader>[ <Plug>(PearTreeOpener_[)
 <
