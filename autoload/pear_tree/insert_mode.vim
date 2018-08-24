@@ -39,9 +39,8 @@ function! pear_tree#insert_mode#OnInsertCharPre() abort
     let b:current_column = col('.') + 1
     if !b:ignore
         call b:traverser.StepOrReset(v:char)
-    else
-        let b:ignore = b:ignore - 1
     endif
+    let b:ignore = 0
 endfunction
 
 
@@ -126,9 +125,8 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
         " it (e.g. <: > and <*>: </*>), even if the user has not finished
         " typing it. When skipping a closer such as `>`, b:ignore should be 1.
         " Use it to ignore the {opener} being typed when checking pair balance.
-        let l:ignore = min([1, b:ignore])
-        return pear_tree#buffer#ComparePositions(l:closer_pos, pear_tree#cursor#Position()) < 0
-                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore) != [-1, -1]
+        return pear_tree#buffer#ComparePositions(l:closer_pos, [line('.'), col('.') - 1]) < 0
+                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, b:ignore) != [-1, -1]
     else
         return 1
     endif
@@ -165,7 +163,7 @@ endfunction
 
 function! pear_tree#insert_mode#HandleCloser(char) abort
     if s:ShouldSkipCloser(a:char)
-        let b:ignore = b:ignore + 1
+        let b:ignore = 1
         return "\<Del>" . a:char
     elseif pear_tree#IsDumbPair(a:char)
         return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
@@ -282,17 +280,16 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             if b:traverser.AtWildcard()
                 " The terminating character should become part of the wildcard
                 " string if it is entered in a `not_in` syntax region.
-                let b:ignore = b:ignore + 1
+                let b:ignore = 1
                 let b:traverser.wildcard_string .= a:char
             else
                 call b:traverser.Reset()
             endif
-        endif
-        if strlen(b:traverser.GetString()) > 1
+        elseif strlen(b:traverser.GetString()) > 1
             return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
         endif
     else
-        let b:ignore = b:ignore + 1
+        let b:ignore = 1
     endif
     return l:opener_end
 endfunction
