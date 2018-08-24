@@ -1,3 +1,10 @@
+" Pear Tree - A painless, powerful Vim auto-pair plugin
+" Maintainer: Thomas Savage <thomasesavage@gmail.com>
+" Version: 0.3
+" License: MIT
+" Website: https://github.com/tmsvg/pear-tree
+
+
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 

@@ -1,3 +1,10 @@
+" Pear Tree - A painless, powerful Vim auto-pair plugin
+" Maintainer: Thomas Savage <thomasesavage@gmail.com>
+" Version: 0.3
+" License: MIT
+" Website: https://github.com/tmsvg/pear-tree
+
+
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 
@@ -5,6 +12,7 @@ set cpoptions&vim
 function! s:ShouldSkip(position, skip_list) abort
     return a:skip_list != [] && pear_tree#buffer#SyntaxRegion(a:position) =~? join(a:skip_list, '\|')
 endfunction
+
 
 " Search through the buffer for {string} beginning at {start_position}.
 function! pear_tree#buffer#Search(string, start_position, ...) abort
