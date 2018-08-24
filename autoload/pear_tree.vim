@@ -106,6 +106,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     if l:closer ==# ''
         return a:start
     endif
+    let l:closer_offset = strlen(l:closer) - 1
 
     let l:has_wildcard = (l:idx != -1)
     let l:is_dumb = pear_tree#IsDumbPair(a:opener)
@@ -142,7 +143,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
             let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:current_pos, l:not_in)
         endif
         if l:closer_pos[0] != -1
-                    \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + strlen(l:closer) - 1], l:opener_pos) >= 0
+                    \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + l:closer_offset], l:opener_pos) >= 0
             let l:count = l:count + 1
             let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]
             " It's not feasible to determine if dumb pairs are balanced in the buffer, so leave early at this point.
@@ -223,6 +224,7 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
     let l:traverser = deepcopy(b:traverser)
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
     let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
+
     let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, a:start)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
     while l:opener_pos != [-1, -1]
