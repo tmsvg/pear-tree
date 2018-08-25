@@ -155,7 +155,9 @@ function! s:ShouldSkipCloser(char) abort
     endif
     for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1])
-        if l:closer_pos != [-1, -1] && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, 1) == [-1, -1]
+        " Ignore closers that are pending in s:strings_to_expand
+        let l:ignore = count(map(copy(s:strings_to_expand), 'v:val[0]'), a:char) + 1
+        if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore) == [-1, -1]
             return 1
         endif
     endfor
@@ -186,8 +188,10 @@ function! s:ShouldDeletePair() abort
         return 1
     elseif get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
         let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, [line('.'), col('.') - 1])
+        " Ignore closers that are pending in s:strings_to_expand
+        let l:ignore = count(map(copy(s:strings_to_expand), 'v:val[0]'), l:next_char) + 1
         " Will deleting both make the next closer unbalanced?
-        return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, 1) == [-1, -1]
+        return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore) == [-1, -1]
     else
         return 1
     endif
