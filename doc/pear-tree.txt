@@ -3,8 +3,8 @@
                                   Pear Tree
 Contents                                                           *pear-tree*
 
-    1. Introduction ....................... |pear_tree_introduction|
-    2. Configuration ...................... |pear_tree_configuration|
+    1. Introduction ....................... |pear-tree-introduction|
+    2. Configuration ...................... |pear-tree-configuration|
 
 ==============================================================================
 1. Introduction                                       *pear-tree-introduction*
@@ -104,7 +104,7 @@ behavior:
     Form: `'until': regexp`
     Function: Replace the wildcard character in the closer with the
               wildcard string in the opener only until the regexp pattern is
-              matched. See `:h match()` for valid patterns.
+              matched. See |match()| for valid patterns.
     Example: `'<*>': {'closer': '</*>', 'until': '\W'}`
              Typing `<p class="Foo">` yields `<p class="Foo"></p>`, and not
              `<p class="Foo"></p class="Foo">` because the space after `<p`
@@ -191,8 +191,6 @@ pair balance instead of always deleting empty pairs:
 If enabled, the first parenthesis remains balanced, while it becomes
 erroneously unbalanced at #3 if disabled.
 
-This is currently experimental and may be slow in large files.
-
 To enable, add the following to your vimrc:
 >
     let g:pear_tree_smart_backspace = 1
@@ -209,7 +207,7 @@ behavior for the corresponding opener.
 To use a different key mapping to trigger auto-pairing for an opener, add
 something like the following to your vimrc:
 >
-    imap <leader>[ <Plug>(PearTreeOpener_[)
+    imap <key> <Plug>(PearTreeOpener_[)
 <
 ------------------------------------------------------------------------------
                                                       *<Plug>(PearTreeCloser)*
@@ -223,7 +221,7 @@ either insert the closer or move past the closer that follows the cursor.
 To use a different key mapping to trigger the Pear Tree functionality for a
 closer, add something like the following to your vimrc:
 >
-    imap <leader>] <Plug>(PearTreeCloser_])
+    imap <key> <Plug>(PearTreeCloser_])
 <
 ------------------------------------------------------------------------------
                                                    *<Plug>(PearTreeBackspace)*
@@ -236,7 +234,7 @@ Usage: return foo(|) -> return foo|
 
 To change the default mapping, add something like the following to your vimrc:
 >
-    imap <C-b> <Plug>(PearTreeBackspace)
+    imap <key> <Plug>(PearTreeBackspace)
 <
 ------------------------------------------------------------------------------
                                                       *<Plug>(PearTreeExpand)*
@@ -260,7 +258,7 @@ Usage: >
 <
 To change the default mapping, add something like the following to your vimrc:
 >
-    imap <C-j> <Plug>(PearTreeExpand)
+    imap <key> <Plug>(PearTreeExpand)
 <
 ------------------------------------------------------------------------------
                                              *<Plug>(PearTreeFinishExpansion)*
@@ -282,25 +280,7 @@ Usage: >
 <
 To change the default mapping, add something like the following to your vimrc:
 >
-    imap <C-b> <Plug>(PearTreeFinishExpansion)
-<
-------------------------------------------------------------------------------
-                                                        *<Plug>(PearTreeJump)*
-Default: None
-
-If the cursor is before a closer whose opener appears earlier in the text,
-move the cursor past the closer.
-
-Usage: >
-    1  <p class="Foo">Hello, world!|</p>
-<
-->
->
-    1  <p class="Foo">Hello, world!</p>|
-<
-To set the mapping, add something like the following to your vimrc:
->
-    imap <C-l> <Plug>(PearTreeJump)
+    imap <key> <Plug>(PearTreeFinishExpansion)
 <
 ------------------------------------------------------------------------------
                                                    *<Plug>(PearTreeExpandOne)*
@@ -326,7 +306,25 @@ Usage: >
 <
 To set the mapping, add something like the following to your vimrc:
 >
-    imap <C-z> <Plug>(PearTreeExpandOne)
+    imap <key> <Plug>(PearTreeExpandOne)
+<
+------------------------------------------------------------------------------
+                                                        *<Plug>(PearTreeJump)*
+Default: None
+
+If the cursor is before a closer whose opener appears earlier in the text,
+move the cursor past the closer.
+
+Usage: >
+    1  <p class="Foo">Hello, world!|</p>
+<
+->
+>
+    1  <p class="Foo">Hello, world!</p>|
+<
+To set the mapping, add something like the following to your vimrc:
+>
+    imap <key> <Plug>(PearTreeJump)
 <
 ------------------------------------------------------------------------------
                                                          *<Plug>(PearTreeJNR)*
@@ -345,7 +343,7 @@ Usage: >
 <
 To set the mapping, add something like the following to your vimrc:
 >
-    imap <C-j> <Plug>(PearTreeExpandOne)
+    imap <key> <Plug>(PearTreeExpandOne)
 <
 ------------------------------------------------------------------------------
 
