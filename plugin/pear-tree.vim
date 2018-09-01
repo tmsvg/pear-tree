@@ -123,7 +123,13 @@ function! s:MapDefaults()
         imap <buffer> <CR> <Plug>(PearTreeExpand)
     endif
     if !hasmapto('<Plug>(PearTreeFinishExpansion)', 'i')
-        imap <buffer> <ESC> <Plug>(PearTreeFinishExpansion)
+        if !has('nvim') && !has('gui_running')
+            " Prevent <ESC> mapping from breaking cursor keys in insert mode
+            inoremap <buffer> <ESC><ESC> <NOP>
+            imap <buffer> <nowait> <ESC> <Plug>(PearTreeFinishExpansion)
+        else
+            imap <buffer> <ESC> <Plug>(PearTreeFinishExpansion)
+        endif
     endif
 endfunction
 
