@@ -168,7 +168,7 @@ endfunction
 function! pear_tree#insert_mode#HandleCloser(char) abort
     if s:ShouldSkipCloser(a:char)
         let b:ignore = 1
-        return "\<Del>" . a:char
+        return s:RIGHT
     elseif pear_tree#IsDumbPair(a:char)
         return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
