@@ -84,7 +84,12 @@ function! s:ShouldCloseSimpleOpener(char) abort
         return 0
     elseif !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
         let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1])
-        return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos) != [-1, -1]
+        " Ignore closers that are pending in s:strings_to_expand
+        let l:ignore = count(join(s:strings_to_expand, ''), l:closer)
+        if l:closer_pos == [-1, -1] && l:ignore > 0
+            let l:closer_pos = pear_tree#cursor#Position()
+        endif
+        return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore) != [-1, -1]
     else
         return 1
     endif
@@ -123,12 +128,18 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
         else
             let l:closer_pos = pear_tree#GetOuterPair(a:opener, a:closer, l:cursor_pos)
         endif
+        " Ignore closers that are pending in s:strings_to_expand
+        let l:ignore = count(join(s:strings_to_expand, ''), a:closer)
+        if l:closer_pos == [-1, -1] && l:ignore > 0
+            let l:closer_pos = l:cursor_pos
+        endif
         " An {opener} may be complete in the buffer if a smaller pair surrounds
         " it (e.g. <: > and <*>: </*>), even if the user has not finished
         " typing it. When skipping a closer such as `>`, b:ignore should be 1.
         " Use it to ignore the {opener} being typed when checking pair balance.
+        let l:ignore = l:ignore + b:ignore
         return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
-                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, b:ignore) != [-1, -1]
+                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore) != [-1, -1]
     else
         return 1
     endif
@@ -156,7 +167,7 @@ function! s:ShouldSkipCloser(char) abort
     for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1])
         " Ignore closers that are pending in s:strings_to_expand
-        let l:ignore = count(map(copy(s:strings_to_expand), 'v:val[0]'), a:char) + 1
+        let l:ignore = count(join(s:strings_to_expand), a:char) + 1
         if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore) == [-1, -1]
             return 1
         endif
@@ -189,7 +200,7 @@ function! s:ShouldDeletePair() abort
     elseif get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
         let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, [line('.'), col('.') - 1])
         " Ignore closers that are pending in s:strings_to_expand
-        let l:ignore = count(map(copy(s:strings_to_expand), 'v:val[0]'), l:next_char) + 1
+        let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
         " Will deleting both make the next closer unbalanced?
         return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore) == [-1, -1]
     else
