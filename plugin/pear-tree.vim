@@ -41,12 +41,13 @@ endif
 
 
 function! s:BufferEnable()
-    if exists('b:pear_tree_enabled') && b:pear_tree_enabled
+    if get(b:, 'pear_tree_enabled', 0)
         return
-    elseif exists('s:saved_mappings')
-        for [l:map, l:map_arg] in items(s:saved_mappings)
+    elseif exists('b:pear_tree_saved_mappings')
+        for [l:map, l:map_arg] in items(b:pear_tree_saved_mappings)
             execute 'imap <buffer> ' . l:map . ' ' . l:map_arg
         endfor
+        unlet b:pear_tree_saved_mappings
     else
         call s:CreatePlugMappings()
         call s:MapDefaults()
@@ -56,14 +57,14 @@ endfunction
 
 
 function! s:BufferDisable()
-    if !(exists('b:pear_tree_enabled') && b:pear_tree_enabled)
+    if !get(b:, 'pear_tree_enabled', 0)
         return
     endif
-    let s:saved_mappings = {}
+    let b:pear_tree_saved_mappings = {}
     for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
         let l:map_arg = maparg(l:map, 'i')
         if l:map_arg =~# '^<Plug>(PearTree\w\+\S*)'
-            let s:saved_mappings[l:map] = l:map_arg
+            let b:pear_tree_saved_mappings[l:map] = l:map_arg
             execute 'silent! iunmap <buffer> ' . l:map
         endif
     endfor
@@ -139,20 +140,26 @@ command -bar PearTreeDisable call s:BufferDisable()
 
 augroup pear_tree
     autocmd!
-    autocmd BufRead,BufNewFile *
+    autocmd FileType *
                 \ if index(g:pear_tree_ft_disabled, &filetype) == -1 |
+                \     call <SID>BufferEnable() |
+                \ else |
+                \     call <SID>BufferDisable() |
+                \ endif
+    autocmd BufRead,BufNewFile,BufEnter *
+                \ if !exists('b:pear_tree_enabled') && index(g:pear_tree_ft_disabled, &filetype) == -1 |
                 \     call <SID>BufferEnable() |
                 \ endif
     autocmd InsertEnter *
-                \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
+                \ if get(b:, 'pear_tree_enabled', 0) |
                 \     call pear_tree#insert_mode#Prepare() |
                 \ endif
     autocmd CursorMovedI,InsertEnter *
-                \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
+                \ if get(b:, 'pear_tree_enabled', 0) |
                 \     call pear_tree#insert_mode#OnCursorMovedI() |
                 \ endif
     autocmd InsertCharPre *
-                \ if exists('b:pear_tree_enabled') && b:pear_tree_enabled |
+                \ if get(b:, 'pear_tree_enabled', 0) |
                 \     call pear_tree#insert_mode#OnInsertCharPre() |
                 \ endif
 augroup END
