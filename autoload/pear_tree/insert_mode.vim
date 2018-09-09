@@ -23,11 +23,12 @@ function! pear_tree#insert_mode#Prepare() abort
     endif
     let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
     let b:traverser = pear_tree#trie_traverser#New(l:trie)
-    let b:current_line = line('.')
-    let b:current_column = col('.')
+
+    let s:current_line = line('.')
+    let s:current_column = col('.')
 
     let s:strings_to_expand = []
-    let b:ignore = 0
+    let s:ignore = 0
 endfunction
 
 
@@ -35,34 +36,34 @@ function! pear_tree#insert_mode#OnInsertCharPre() abort
     " Characters inserted by autocomplete are not caught by InsertCharPre,
     " so the traverser must be corrected.
     if pumvisible()
-        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [line('.'), col('.') - 1])
+        call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [line('.'), col('.') - 1])
     endif
-    let b:current_column = col('.') + 1
-    if !b:ignore
+    let s:current_column = col('.') + 1
+    if !s:ignore
         call b:traverser.StepOrReset(v:char)
     endif
-    let b:ignore = 0
+    let s:ignore = 0
 endfunction
 
 
 function! pear_tree#insert_mode#OnCursorMovedI() abort
     let l:new_line = line('.')
     let l:new_col = col('.')
-    if l:new_line != b:current_line || l:new_col < b:current_column
+    if l:new_line != s:current_line || l:new_col < s:current_column
         call b:traverser.Reset()
         call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
-    elseif l:new_col > b:current_column
+    elseif l:new_col > s:current_column
         if b:traverser.AtRoot()
-            call b:traverser.TraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
+            call b:traverser.TraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
         else
-            call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [l:new_line, l:new_col - 1])
+            call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
             if b:traverser.AtEndOfString()
                 call b:traverser.Reset()
             endif
         endif
     endif
-    let b:current_column = l:new_col
-    let b:current_line = l:new_line
+    let s:current_column = l:new_col
+    let s:current_line = l:new_line
 endfunction
 
 
@@ -135,9 +136,9 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
         endif
         " An {opener} may be complete in the buffer if a smaller pair surrounds
         " it (e.g. <: > and <*>: </*>), even if the user has not finished
-        " typing it. When skipping a closer such as `>`, b:ignore should be 1.
+        " typing it. When skipping a closer such as `>`, s:ignore should be 1.
         " Use it to ignore the {opener} being typed when checking pair balance.
-        let l:ignore = l:ignore + b:ignore
+        let l:ignore = l:ignore + s:ignore
         return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
                     \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore) != [-1, -1]
     else
@@ -178,7 +179,7 @@ endfunction
 
 function! pear_tree#insert_mode#HandleCloser(char) abort
     if s:ShouldSkipCloser(a:char)
-        let b:ignore = 1
+        let s:ignore = 1
         return s:RIGHT
     elseif pear_tree#IsDumbPair(a:char)
         return a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
@@ -283,7 +284,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     " so the traverser misses. This function triggers before CursorMovedI and
     " InsertCharPre, so the traverser must be corrected here.
     if pumvisible()
-        call b:traverser.WeakTraverseBuffer([b:current_line, b:current_column - 1], [line('.'), col('.') - 1])
+        call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [line('.'), col('.') - 1])
     endif
     if pear_tree#IsCloser(a:char)
         let l:opener_end = pear_tree#insert_mode#HandleCloser(a:char)
@@ -299,7 +300,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             if b:traverser.AtWildcard()
                 " The terminating character should become part of the wildcard
                 " string if it is entered in a `not_in` syntax region.
-                let b:ignore = 1
+                let s:ignore = 1
                 let b:traverser.wildcard_string .= a:char
             else
                 call b:traverser.Reset()
@@ -308,7 +309,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
         endif
     else
-        let b:ignore = 1
+        let s:ignore = 1
     endif
     return l:opener_end
 endfunction
