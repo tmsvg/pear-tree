@@ -43,13 +43,9 @@ endif
 function! s:BufferEnable()
     if get(b:, 'pear_tree_enabled', 0)
         return
-    elseif exists('b:pear_tree_saved_mappings')
-        for [l:map, l:map_arg] in items(b:pear_tree_saved_mappings)
-            execute 'imap <buffer> ' . l:map . ' ' . l:map_arg
-        endfor
-        unlet b:pear_tree_saved_mappings
-    else
-        call s:CreatePlugMappings()
+    endif
+    call s:CreatePlugMappings()
+    if !exists('b:pear_tree_enabled')
         call s:MapDefaults()
     endif
     let b:pear_tree_enabled = 1
@@ -60,14 +56,17 @@ function! s:BufferDisable()
     if !get(b:, 'pear_tree_enabled', 0)
         return
     endif
-    let b:pear_tree_saved_mappings = {}
-    for l:map in map(split(execute('imap'), '\n'), 'split(v:val, ''\s\+'')[1]')
-        let l:map_arg = maparg(l:map, 'i')
-        if l:map_arg =~# '^<Plug>(PearTree\w\+\S*)'
-            let b:pear_tree_saved_mappings[l:map] = l:map_arg
-            execute 'silent! iunmap <buffer> ' . l:map
-        endif
+    let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
+    for [l:opener, l:closer] in map(items(l:pairs), '[v:val[0][-1:], v:val[1].closer]')
+        execute 'inoremap <silent> <buffer> <Plug>(PearTreeOpener_' . l:opener . ') ' . l:opener
+        execute 'inoremap <silent> <buffer> <Plug>(PearTreeCloser_' . l:closer . ') ' . l:closer
     endfor
+    inoremap <silent> <buffer> <Plug>(PearTreeBackspace) <BS>
+    inoremap <silent> <buffer> <Plug>(PearTreeExpand) <CR>
+    inoremap <silent> <buffer> <Plug>(PearTreeFinishExpansion) <ESC>
+    inoremap <silent> <buffer> <Plug>(PearTreeExpandOne) <NOP>
+    inoremap <silent> <buffer> <Plug>(PearTreeJump) <NOP>
+    inoremap <silent> <buffer> <Plug>(PearTreeJNR) <NOP>
     let b:pear_tree_enabled = 0
 endfunction
 
@@ -89,12 +88,12 @@ function! s:CreatePlugMappings()
                         \ . l:escaped_closer . ''')'
         endif
     endfor
-    inoremap <silent> <expr> <Plug>(PearTreeBackspace) pear_tree#insert_mode#Backspace()
-    inoremap <silent> <expr> <Plug>(PearTreeJump) pear_tree#insert_mode#JumpOut()
-    inoremap <silent> <expr> <Plug>(PearTreeJNR) pear_tree#insert_mode#JumpNReturn()
-    inoremap <silent> <expr> <Plug>(PearTreeExpand) pear_tree#insert_mode#PrepareExpansion()
-    inoremap <silent> <expr> <Plug>(PearTreeExpandOne) pear_tree#insert_mode#ExpandOne()
-    inoremap <silent> <expr> <Plug>(PearTreeFinishExpansion) pear_tree#insert_mode#Expand()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeBackspace) pear_tree#insert_mode#Backspace()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeExpand) pear_tree#insert_mode#PrepareExpansion()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeFinishExpansion) pear_tree#insert_mode#Expand()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeExpandOne) pear_tree#insert_mode#ExpandOne()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeJump) pear_tree#insert_mode#JumpOut()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeJNR) pear_tree#insert_mode#JumpNReturn()
 endfunction
 
 
@@ -141,9 +140,8 @@ command -bar PearTreeDisable call s:BufferDisable()
 augroup pear_tree
     autocmd!
     autocmd FileType *
-                \ if index(g:pear_tree_ft_disabled, &filetype) == -1 |
-                \     call <SID>BufferEnable() |
-                \ else |
+                \ call <SID>BufferEnable() |
+                \ if index(g:pear_tree_ft_disabled, &filetype) > -1 |
                 \     call <SID>BufferDisable() |
                 \ endif
     autocmd BufRead,BufNewFile,BufEnter *
