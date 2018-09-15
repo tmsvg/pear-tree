@@ -109,7 +109,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:closer_offset = strlen(l:closer) - 1
 
     let l:has_wildcard = (l:idx != -1)
-    let l:is_dumb = pear_tree#IsDumbPair(a:opener)
+    let l:is_dumb = pear_tree#IsDumbPair(l:closer)
 
     if l:has_wildcard
         let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
