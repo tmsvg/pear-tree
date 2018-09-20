@@ -17,19 +17,12 @@ function! s:TrieNode(char) abort
 endfunction
 
 
-function! pear_tree#trie#New(...) abort
+function! pear_tree#trie#New(strings) abort
     let l:trie = {'root': s:TrieNode(''),
-                \ 'leaves': [],
                 \ 'wildcard_symbol': 'wc'}
-    if a:0 == 0
-        return l:trie
-    elseif type(a:1) == type([])
-        for l:str in a:1
-            call pear_tree#trie#Insert(l:trie, l:str)
-        endfor
-    elseif type(a:1) == type('')
+    for l:str in a:strings
         call pear_tree#trie#Insert(l:trie, l:str)
-    endif
+    endfor
     return l:trie
 endfunction
 
@@ -46,14 +39,25 @@ function! pear_tree#trie#Insert(trie, str) abort
         endif
         let l:current = l:node
     endfor
-    call add(a:trie.leaves, l:current)
     let l:current.is_end_of_string = 1
     return a:trie
 endfunction
 
 
+function! s:GetStrings(node, string) abort
+    if a:node.is_end_of_string
+        return [a:string]
+    endif
+    let l:strings = []
+    for l:ch in keys(a:node.children)
+        call extend(l:strings, s:GetStrings(a:node.children[l:ch], a:string . l:ch))
+    endfor
+    return l:strings
+endfunction
+
+
 function! pear_tree#trie#Strings(trie) abort
-    return map(copy(a:trie.leaves), 'pear_tree#trie#Prefix(a:trie, v:val)')
+    return map(s:GetStrings(a:trie.root, ''), "pear_tree#string#Decode(v:val, '*', a:trie.wildcard_symbol)")
 endfunction
 
 

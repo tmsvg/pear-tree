@@ -81,19 +81,5 @@ function! pear_tree#string#VisualLength(str) abort
 endfunction
 
 
-" Return a list of indices representing positions within {text} at which a
-" string in the list {strings} first appears.
-function! pear_tree#string#FindAll(text, strings, start) abort
-    let l:indices = []
-    for l:string in a:strings
-        let l:idx = stridx(a:text, l:string, a:start)
-        if l:idx != -1
-            call add(l:indices, l:idx)
-        endif
-    endfor
-    return l:indices
-endfunction
-
-
 let &cpoptions = s:save_cpo
 unlet s:save_cpo

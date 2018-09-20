@@ -168,7 +168,7 @@ endfunction
 function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
     let l:pos = copy(a:start_pos)
     let l:end = [-1, -1]
-    let l:text = ''
+    let l:candidate = ''
     while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
         let l:line = getline(l:pos[0])
         if l:self.StepToChild(l:line[l:pos[1]])
@@ -178,29 +178,30 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
                 else
                     " Reached the end of a string, but it may be a substring
                     " of a longer one. Remember this position, but don't stop.
-                    let l:text = pear_tree#string#Encode(l:self.string, '*', l:self.wildcard_string)
+                    let l:candidate = pear_tree#string#Encode(l:self.string, '*', l:self.wildcard_string)
                     let l:end = copy(l:pos)
                 endif
             endif
         else
             call l:self.Reset()
-            for l:ch in split(l:text, '\zs')
+            for l:ch in split(l:candidate, '\zs')
                 call l:self.StepOrReset(l:ch)
             endfor
             return l:end
         endif
         if l:self.AtWildcard()
             let l:positions = [a:end_pos]
-            let l:str = pear_tree#trie#Prefix(l:self.trie, l:self.current)
+            " let l:str = pear_tree#trie#Prefix(l:self.trie, l:self.current)
+            let l:str = pear_tree#string#Decode(l:self.string, '*', l:self.trie.wildcard_symbol)
             for l:char in keys(l:self.current.children)
                 if has_key(pear_tree#Pairs(), l:str . l:char)
                     let l:not_in = pear_tree#GetRule(l:str . l:char, 'not_in')
                 else
                     let l:not_in = []
                 endif
-                let l:search = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
-                if l:search != [-1, -1]
-                    call add(l:positions, l:search)
+                let l:search_pos = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
+                if l:search_pos != [-1, -1]
+                    call add(l:positions, l:search_pos)
                 endif
             endfor
             let l:end_of_wildcard = pear_tree#buffer#MinPosition(l:positions)
