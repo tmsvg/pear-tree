@@ -45,7 +45,7 @@ endfunction
 
 
 function! s:GetStrings(node, string) abort
-    if a:node.is_end_of_string
+    if a:node.children == {}
         return [a:string]
     endif
     let l:strings = []
