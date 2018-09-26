@@ -90,8 +90,16 @@ endfunction
 " An optional argument {skip_count} tells the function to ignore the first
 " {skip_count} openers. This can be used to see if the closer at {start}
 " would be balanced if the previous {skip_count} openers were deleted.
+"
+" An optional argument {cursor_at_opener} tells the function that the user is
+" currently typing an opener. So if the buffer looks like:
+"       <html|
+"         <body></body>
+" the function will ignore <html instead of considering it to be an opener
+" `<*>` whose wildcard string is `html   <body`.
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
+    let l:cursor_at_opener = a:0 == 2 ? a:2 : 0
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     " The syntax region at {start} should always be included in searches.
@@ -128,7 +136,11 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                     call l:traverser.Reset()
                     let l:search_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:search_pos)
                     let l:end_pos = l:traverser.WeakTraverseBuffer(l:search_pos, l:opener_pos)
-                    if l:end_pos[0] != -1
+                    if l:cursor_at_opener
+                                \ && pear_tree#buffer#ComparePositions(l:search_pos, pear_tree#cursor#Position()) < 0
+                                \ && pear_tree#buffer#ComparePositions(l:end_pos, pear_tree#cursor#Position()) > 0
+                        " Ignore this opener.
+                    elseif l:end_pos[0] != -1
                                 \ && pear_tree#GenerateCloser(l:traverser.GetString(), l:traverser.GetWildcardString(), [0, 0]) ==# l:closer
                         break
                     endif
@@ -196,8 +208,8 @@ endfunction
 " Return the position of the end of the innermost pair that surrounds {start}.
 function! pear_tree#GetOuterPair(opener, closer, start) abort
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-    let l:opener_pos = pear_tree#buffer#Search(a:opener, pear_tree#cursor#Position(), l:not_in)
-    let l:closer_pos = pear_tree#buffer#Search(a:closer, pear_tree#cursor#Position(), l:not_in)
+    let l:opener_pos = pear_tree#buffer#Search(a:opener, a:start, l:not_in)
+    let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
     while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
                 \ && l:opener_pos != [-1, -1]
         let l:opener_pos[1] += 1
@@ -232,17 +244,20 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
                 \ || l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1]
                 \ || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
         let l:opener_pos[1] += 1
-        let l:closer_pos[1] += 1
         let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, l:opener_pos)
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) > 0
-            let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+            let l:closer_pos[1] += 1
+            let l:closer_pos = pear_tree#buffer#Search(a:closer, l:closer_pos, l:not_in)
         endif
     endwhile
     if l:opener_pos == [-1, -1]
         let l:opener_pos = pear_tree#buffer#End()
     endif
     let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
-    return pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
+    if pear_tree#buffer#ComparePositions(l:closer_pos, a:start) < 0
+        let l:closer_pos = [-1, -1]
+    endif
+    return l:closer_pos
 endfunction
 
 

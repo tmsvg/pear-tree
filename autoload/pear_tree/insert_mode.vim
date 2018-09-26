@@ -140,7 +140,7 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
         " Use it to ignore the {opener} being typed when checking pair balance.
         let l:ignore = l:ignore + s:ignore
         return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
-                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore) != [-1, -1]
+                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore, 1) != [-1, -1]
     else
         return 1
     endif
