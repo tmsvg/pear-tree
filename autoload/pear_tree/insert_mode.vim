@@ -84,9 +84,13 @@ function! s:ShouldCloseSimpleOpener(char) abort
                 \ && pear_tree#GetSurroundingPair() == []
         return 0
     elseif !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
-        let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1])
         " Ignore closers that are pending in s:strings_to_expand
         let l:ignore = count(join(s:strings_to_expand, ''), l:closer)
+
+        let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1])
+        let l:opener_pos = pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore)
+        let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, l:opener_pos)
+
         if l:closer_pos == [-1, -1] && l:ignore > 0
             let l:closer_pos = pear_tree#cursor#Position()
         endif
@@ -166,9 +170,13 @@ function! s:ShouldSkipCloser(char) abort
         return 1
     endif
     for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
-        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1])
         " Ignore closers that are pending in s:strings_to_expand
         let l:ignore = count(join(s:strings_to_expand), a:char) + 1
+
+        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1])
+        let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore)
+        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, l:opener_pos)
+
         if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore) == [-1, -1]
             return 1
         endif
@@ -198,9 +206,14 @@ function! s:ShouldDeletePair() abort
     elseif pear_tree#IsDumbPair(l:prev_char)
         return 1
     elseif get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
-        let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, [line('.'), col('.') - 1])
         " Ignore closers that are pending in s:strings_to_expand
         let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
+
+        let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, [line('.'), col('.') - 1])
+        let l:opener_pos = pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore)
+        let l:opener_pos[1] += 1
+        let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, l:opener_pos)
+
         " Will deleting both make the next closer unbalanced?
         return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore) == [-1, -1]
     else
