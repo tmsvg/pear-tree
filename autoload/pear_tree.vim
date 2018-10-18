@@ -207,6 +207,9 @@ endfunction
 
 " Return the position of the end of the innermost pair that surrounds {start}.
 function! pear_tree#GetOuterPair(opener, closer, start) abort
+    if pear_tree#buffer#ComparePositions(a:start, [1, 0]) < 0
+        return [-1, -1]
+    endif
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:opener_pos = pear_tree#buffer#Search(a:opener, a:start, l:not_in)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
@@ -232,6 +235,9 @@ endfunction
 " {start}. Note that {wildcard} must be the wildcard string as it appears in
 " {closer}, after the `until` rule has been applied.
 function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
+    if pear_tree#buffer#ComparePositions(a:start, [1, 0]) < 0
+        return [-1, -1]
+    endif
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:traverser = deepcopy(b:traverser)
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
