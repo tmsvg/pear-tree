@@ -74,21 +74,28 @@ function! s:ShouldCloseSimpleOpener(char) abort
     let l:prev_char = pear_tree#cursor#PrevChar()
     let l:is_dumb = pear_tree#IsDumbPair(a:char)
 
-    let l:maybe_not = 0
-    if l:next_char =~# '\w'
-                \ || (l:is_dumb && (l:prev_char =~# '\w'
-                \                   || pear_tree#IsCloser(l:prev_char)
-                \                   || l:prev_char ==# a:char))
-        let l:maybe_not = 1
-    elseif !pear_tree#cursor#OnEmptyLine()
-                \ && !pear_tree#cursor#AtEndOfLine()
-                \ && l:next_char =~# '\S'
-                \ && l:next_char !=# l:closer
-        let l:maybe_not = 1
+    let l:valid_before = !l:is_dumb
+                \ || (l:prev_char !~# '\w'
+                \     && l:prev_char !=# a:char
+                \     && !pear_tree#IsCloser(l:prev_char))
+    let l:valid_after = (l:next_char !~# '\S'
+                \        || l:next_char ==# l:closer)
+    if !l:valid_before || !l:valid_after
+        if pear_tree#IsDumbPair(l:next_char)
+            return 0
+        else
+            let l:pair = pear_tree#GetSurroundingPair()
+            if l:pair == []
+                return 0
+            elseif l:is_dumb
+                        \ && pear_tree#buffer#ComparePositions([line('.'), col('.') - 2], get(l:pair, 3, [-1, -1])) != 0
+                        \ && strridx(getline('.'), l:pair[1], col('.')) == col('.') - 1
+                        \ && l:prev_char =~# '\S'
+                return 0
+            endif
+        endif
     endif
-    if l:maybe_not && (pear_tree#IsDumbPair(l:next_char) || pear_tree#GetSurroundingPair() == [])
-        return 0
-    elseif !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
+    if !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
         " Ignore closers that are pending in s:strings_to_expand
         let l:strings_to_expand = join(s:strings_to_expand, '')
         let l:ignore = count(l:strings_to_expand, l:closer) - count(l:strings_to_expand, a:char)
