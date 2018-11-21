@@ -191,7 +191,7 @@ function! s:ShouldSkipCloser(char) abort
         let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore)
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, l:opener_pos)
 
-        if l:closer_pos == [-1, -1] && l:ignore > 0
+        if l:closer_pos == [-1, -1]
             let l:closer_pos = pear_tree#cursor#Position()
         endif
         if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore + 1) == [-1, -1]

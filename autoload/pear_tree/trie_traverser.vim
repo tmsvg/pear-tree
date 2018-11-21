@@ -92,7 +92,9 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
     " that must be scanned can be greatly reduced.
     let l:min_pos = copy(a:end_pos)
     let l:min_not_in = []
-    for l:str in filter(pear_tree#trie#Strings(l:self.trie), 'strlen(v:val) > 1')
+    let l:strings = pear_tree#trie#Strings(l:self.trie)
+
+    for l:str in filter(copy(l:strings), 'strlen(v:val) > 1')
         let l:not_in = pear_tree#GetRule(l:str, 'not_in')
         if pear_tree#string#UnescapedStridx(l:str, '*') > -1
             " An occurrence of the final character of a string with a wildcard
@@ -117,7 +119,9 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
 
     let l:pos = l:min_pos
     let l:not_in = l:min_not_in
-    let l:grandparents = filter(copy(l:self.trie.root.children), 'v:val.children != {}')
+
+    let l:wildcards = map(filter(copy(l:strings), 'pear_tree#string#UnescapedStridx(v:val, ''*'') > -1'), 'v:val[0]')
+
     while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
         let l:line = getline(l:pos[0])
         call l:self.StepOrReset(l:line[l:pos[1]])
@@ -141,15 +145,24 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
             endif
             let l:pos = copy(l:end_of_wildcard)
             let l:pos[1] = l:pos[1] + 1
-        elseif l:self.AtRoot()
+        elseif l:self.AtRoot() && l:wildcards != []
             let l:positions = [a:end_pos]
-            for l:char in keys(l:grandparents)
+            for l:char in l:wildcards
                 let l:search_pos = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
                 if l:search_pos != [-1, -1]
                     call add(l:positions, l:search_pos)
+                else
+                    call remove(l:wildcards, l:char)
                 endif
             endfor
-            let l:pos = pear_tree#buffer#MinPosition(l:positions)
+            " When no more wildcard strings are found in the buffer, skip to
+            " the end minus the length of the longest string in the trie.
+            if l:wildcards == []
+                let l:pos = copy(a:end_pos)
+                let l:pos[1] = max([0, l:pos[1] - max(map(copy(l:strings), 'strlen(v:val)'))])
+            else
+                let l:pos = pear_tree#buffer#MinPosition(l:positions)
+            endif
         else
             let l:pos[1] = l:pos[1] + 1
             if l:pos[1] == strlen(l:line)
