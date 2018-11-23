@@ -117,6 +117,9 @@ function! s:ShouldCloseSimpleOpener(char) abort
             let l:closer_pos = pear_tree#cursor#Position()
         else
             let l:opener_pos = pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore)
+            if pear_tree#buffer#ComparePositions(l:opener_pos, [1, 0]) < 0
+                let l:opener_pos = [1, 0]
+            endif
             let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, l:opener_pos)
         endif
         return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore) != [-1, -1]
