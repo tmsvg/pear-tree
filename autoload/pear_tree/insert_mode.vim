@@ -29,15 +29,24 @@ function! pear_tree#insert_mode#Prepare() abort
 
     let s:strings_to_expand = []
     let s:ignore = 0
+    let s:lost_track = 0
+endfunction
+
+
+function! s:CorrectTraverser() abort
+    if s:lost_track
+        call b:traverser.Reset()
+        call b:traverser.TraverseBuffer([1, 0], [line('.'), col('.') - 1])
+        let s:lost_track = 0
+    elseif pumvisible()
+        " Characters inserted by autocomplete are not caught by InsertCharPre,
+        call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [line('.'), col('.') - 1])
+    endif
 endfunction
 
 
 function! pear_tree#insert_mode#OnInsertCharPre() abort
-    " Characters inserted by autocomplete are not caught by InsertCharPre,
-    " so the traverser must be corrected.
-    if pumvisible()
-        call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [line('.'), col('.') - 1])
-    endif
+    call s:CorrectTraverser()
     let s:current_column = col('.') + 1
     if !s:ignore
         call b:traverser.StepOrReset(v:char)
@@ -50,10 +59,13 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
     let l:new_line = line('.')
     let l:new_col = col('.')
     if l:new_line != s:current_line || l:new_col < s:current_column
-        call b:traverser.Reset()
-        call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
+        let s:lost_track = 1
     elseif l:new_col > s:current_column
-        if b:traverser.AtRoot()
+        if s:lost_track
+            call b:traverser.Reset()
+            call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
+            let s:lost_track = 0
+        elseif b:traverser.AtRoot()
             call b:traverser.TraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
         else
             call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
@@ -309,12 +321,7 @@ endfunction
 
 " Called when pressing the last character in an opener string.
 function! pear_tree#insert_mode#TerminateOpener(char) abort
-    " Characters inserted by autocomplete are not caught by InsertCharPre,
-    " so the traverser misses. This function triggers before CursorMovedI and
-    " InsertCharPre, so the traverser must be corrected here.
-    if pumvisible()
-        call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [line('.'), col('.') - 1])
-    endif
+    call s:CorrectTraverser()
     if pear_tree#IsCloser(a:char)
         let l:opener_end = pear_tree#insert_mode#HandleCloser(a:char)
     elseif has_key(pear_tree#Pairs(), a:char)
