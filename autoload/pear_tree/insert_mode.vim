@@ -325,8 +325,8 @@ endfunction
 " Called when pressing the last character in an opener string.
 function! pear_tree#insert_mode#TerminateOpener(char) abort
     call s:CorrectTraverser()
-    if pear_tree#IsCloser(a:char)
-        let l:opener_end = pear_tree#insert_mode#HandleCloser(a:char)
+    if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
+        let l:opener_end = s:RIGHT
     elseif has_key(pear_tree#Pairs(), a:char)
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
