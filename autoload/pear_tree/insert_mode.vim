@@ -141,17 +141,24 @@ endfunction
 
 " Define situations in which Pear Tree should close a complex opener.
 function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
+    let l:next_char = pear_tree#cursor#NextChar()
+    let l:prev_char = pear_tree#cursor#PrevChar()
+    let l:prev_text = pear_tree#cursor#TextBefore()
     " The wildcard string can span multiple lines, but the opener
     " should not be terminated when the terminating character is the only
     " character on the line.
-    if strlen(pear_tree#string#Trim(pear_tree#cursor#TextBefore())) == 0
+    if strlen(pear_tree#string#Trim(l:prev_text)) == 0
+        return 0
+    elseif pear_tree#IsDumbPair(l:next_char)
+        return 0
+    elseif pear_tree#IsDumbPair(a:opener) && l:prev_text[-strlen(a:opener):] ==# a:opener
         return 0
     " The cursor should also be at the end of the line, before whitespace,
     " or between another pair.
-    elseif !(pear_tree#cursor#AtEndOfLine()
-                \ || pear_tree#cursor#NextChar() =~# '\s'
-                \ || has_key(pear_tree#Pairs(), pear_tree#cursor#NextChar())
-                \ || pear_tree#GetSurroundingPair() != [])
+    elseif !pear_tree#cursor#AtEndOfLine()
+                \ && l:next_char !~# '\s'
+                \ && !has_key(pear_tree#Pairs(), l:next_char)
+                \ && pear_tree#GetSurroundingPair() == []
         return 0
     elseif get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
         let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
@@ -326,7 +333,7 @@ endfunction
 function! pear_tree#insert_mode#TerminateOpener(char) abort
     call s:CorrectTraverser()
     if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
-        let l:opener_end = s:RIGHT
+        let l:opener_end = "\<DEL>" . a:char
     elseif has_key(pear_tree#Pairs(), a:char)
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
@@ -345,7 +352,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
                 call b:traverser.Reset()
             endif
         elseif strlen(b:traverser.GetString()) > 1
-            return l:opener_end . pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
+            let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(b:traverser.GetString(), b:traverser.GetWildcardString())
         endif
     else
         let s:ignore = 1

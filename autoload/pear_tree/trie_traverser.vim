@@ -180,8 +180,8 @@ endfunction
 " end of a string or [-1, -1] if it exited early.
 function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
     let l:pos = copy(a:start_pos)
-    let l:end = [-1, -1]
     let l:candidate = ''
+    let l:candidate_pos = [-1, -1]
     while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
         let l:line = getline(l:pos[0])
         if l:self.StepToChild(l:line[l:pos[1]])
@@ -192,19 +192,14 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
                     " Reached the end of a string, but it may be a substring
                     " of a longer one. Remember this position, but don't stop.
                     let l:candidate = pear_tree#string#Encode(l:self.string, '*', l:self.wildcard_string)
-                    let l:end = copy(l:pos)
+                    let l:candidate_pos = copy(l:pos)
                 endif
             endif
         else
-            call l:self.Reset()
-            for l:ch in split(l:candidate, '\zs')
-                call l:self.StepOrReset(l:ch)
-            endfor
-            return l:end
+            break
         endif
         if l:self.AtWildcard()
             let l:positions = [a:end_pos]
-            " let l:str = pear_tree#trie#Prefix(l:self.trie, l:self.current)
             let l:str = pear_tree#string#Decode(l:self.string, '*', l:self.trie.wildcard_symbol)
             for l:char in keys(l:self.current.children)
                 if has_key(pear_tree#Pairs(), l:str . l:char)
@@ -230,7 +225,17 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
         endif
         let l:pos[1] = l:pos[1] + 1
     endwhile
-    " Failed to reach the end of a string, but did not reset.
+    " At this point, we failed to reach the end of the string.
+    "
+    " Did we find a substring of the string that is complete?
+    " If so, return its position.
+    if l:candidate_pos != [-1, -1]
+        call l:self.Reset()
+        for l:ch in split(l:candidate, '\zs')
+            call l:self.StepOrReset(l:ch)
+        endfor
+        return l:candidate_pos
+    endif
     return [-1, -1]
 endfunction
 
