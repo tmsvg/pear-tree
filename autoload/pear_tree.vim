@@ -14,12 +14,23 @@ let s:pear_tree_default_rules = {
             \ 'not_if': [],
             \ 'until': '[[:punct:][:space:]]'
             \ }
+
 if v:version > 704 || (v:version == 704 && has('patch849'))
-    let s:LEFT = "\<C-g>U" . "\<Left>"
-    let s:RIGHT = "\<C-g>U" . "\<Right>"
+    let s:LEFT = "\<C-g>U\<Left>"
+    let s:RIGHT = "\<C-g>U\<Right>"
 else
     let s:LEFT = "\<Left>"
     let s:RIGHT = "\<Right>"
+endif
+
+if exists('*reltimefloat')
+    function! s:ReltimeFloat(reltime) abort
+        return reltimefloat(a:reltime) * 1000
+    endfunction
+else
+    function! s:ReltimeFloat(reltime) abort
+        return str2float(reltimestr(a:reltime)) * 1000
+    endfunction
 endif
 
 
@@ -91,6 +102,10 @@ endfunction
 " {skip_count} openers. This can be used to see if the closer at {start}
 " would be balanced if the previous {skip_count} openers were deleted.
 "
+" An optional argument {timeout_length} tells the function to exit after the
+" given amount of time has passed. If it times out, return [-1, -1].
+" Note that this argument requires Vim to be compiled with +reltime support.
+"
 " An optional argument {cursor_at_opener} tells the function that the user is
 " currently typing an opener. So if the buffer looks like:
 "       <html|
@@ -99,7 +114,13 @@ endfunction
 " `<*>` whose wildcard string is `html   <body`.
 function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:count = a:0 ? a:1 : 0
-    let l:cursor_at_opener = a:0 == 2 ? a:2 : 0
+
+    let l:timeout_length = a:0 == 2 ? a:2 : 0
+    if l:timeout_length > 0
+        let l:start_time = reltime()
+    endif
+
+    let l:cursor_at_opener = a:0 == 3 ? a:3 : 0
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     " The syntax region at {start} should always be included in searches.
@@ -127,7 +148,7 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:current_pos = [a:start[0], a:start[1]]
     let l:closer_pos = [a:start[0], a:start[1] + 1]
     let l:opener_pos = [a:start[0], a:start[1] + 1]
-    while l:current_pos[0] > -1
+    while l:current_pos[0] > -1 && (l:timeout_length <= 0 || s:ReltimeFloat(reltime(l:start_time)) < l:timeout_length)
         " Find the previous opener and closer in the buffer.
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:current_pos) > 0
             if l:has_wildcard
@@ -206,15 +227,25 @@ endfunction
 
 
 " Return the position of the end of the innermost pair that surrounds {start}.
-function! pear_tree#GetOuterPair(opener, closer, start) abort
+"
+" An option argument {timeout_length} tells the function to exit early after
+" the given amount of time has passed. Note that this argument requires Vim to
+" be compiled with +reltime support.
+function! pear_tree#GetOuterPair(opener, closer, start, ...) abort
     if pear_tree#buffer#ComparePositions(a:start, [1, 0]) < 0
         return [-1, -1]
     endif
+    let l:timeout_length = a:0 ? a:1 : 0
+    if l:timeout_length > 0
+        let l:start_time = reltime()
+    endif
+
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:opener_pos = pear_tree#buffer#Search(a:opener, a:start, l:not_in)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
-    while pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                \ && l:opener_pos != [-1, -1]
+    while l:opener_pos != [-1, -1]
+                \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
+                \ && (l:timeout_length <= 0 || s:ReltimeFloat(reltime(l:start_time)) < l:timeout_length)
         let l:opener_pos[1] += 1
         let l:closer_pos[1] += 1
         let l:opener_pos = pear_tree#buffer#Search(a:opener, l:opener_pos, l:not_in)
@@ -234,10 +265,19 @@ endfunction
 " Return the position of the end of the innermost wildcard pair that surrounds
 " {start}. Note that {wildcard} must be the wildcard string as it appears in
 " {closer}, after the `until` rule has been applied.
-function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
+"
+" An option argument {timeout_length} tells the function to exit early after
+" the given amount of time has passed. Note that this argument requires Vim to
+" be compiled with +reltime support.
+function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start, ...) abort
     if pear_tree#buffer#ComparePositions(a:start, [1, 0]) < 0
         return [-1, -1]
     endif
+    let l:timeout_length = a:0 ? a:1 : 0
+    if l:timeout_length > 0
+        let l:start_time = reltime()
+    endif
+
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
     let l:traverser = deepcopy(b:traverser)
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
@@ -247,8 +287,9 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start) abort
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
     while l:opener_pos != [-1, -1]
                 \ && (pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                \ || l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1]
-                \ || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
+                \     || l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1]
+                \     || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
+                \ && (l:timeout_length <= 0 || s:ReltimeFloat(reltime(l:start_time)) < l:timeout_length)
         let l:opener_pos[1] += 1
         let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, l:opener_pos)
         if pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) > 0

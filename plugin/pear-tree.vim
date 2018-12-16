@@ -39,12 +39,23 @@ if !exists('g:pear_tree_smart_closers')
     let g:pear_tree_smart_closers = 0
 endif
 
+if !exists('g:pear_tree_timeout')
+    let g:pear_tree_timeout = has('reltime') ? 60 : 0
+endif
+
 
 function! s:BufferEnable()
     if get(b:, 'pear_tree_enabled', 0)
         return
     endif
     call s:CreatePlugMappings()
+    if get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0)) > 0 && !has('reltime')
+        echohl WarningMsg
+        echom "Pear Tree: pear_tree_timeout requires Vim compiled with reltime support."
+        echohl None
+        let b:pear_tree_timeout = 0
+        let g:pear_tree_timeout = 0
+    endif
     if !exists('b:pear_tree_enabled')
         call s:MapDefaults()
     endif

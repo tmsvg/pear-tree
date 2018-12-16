@@ -129,6 +129,9 @@ let g:pear_tree_smart_openers = 0
 let g:pear_tree_smart_closers = 0
 let g:pear_tree_smart_backspace = 0
 
+" If enabled, smart pair functions timeout after 60ms.
+let g:pear_tree_timeout = 60
+
 " Default mappings:
 imap <BS> <Plug>(PearTreeBackspace)
 imap <CR> <Plug>(PearTreeExpand)

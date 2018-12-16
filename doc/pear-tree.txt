@@ -26,6 +26,7 @@ Variables:
     g:pear_tree_smart_openers ............. |g:pear_tree_smart_openers|
     g:pear_tree_smart_closers ............. |g:pear_tree_smart_closers|
     g:pear_tree_smart_backspace ........... |g:pear_tree_smart_backspace|
+    g:pear_tree_timeout ................... |g:pear_tree_timeout|
 
 Mappings:
 
@@ -196,6 +197,21 @@ To enable, add the following to your vimrc:
     let g:pear_tree_smart_backspace = 1
 <
 ------------------------------------------------------------------------------
+                                                         *g:pear_tree_timeout*
+                                                         *b:pear_tree_timeout*
+Type: Number
+
+Default: `60`
+
+Set a timeout (in milliseconds) for the balance-checking functions used for
+smart pairs. A lower value will prevent delays when typing in larger files
+while lowering the accuracy of smart pairing functions.
+
+To disable timeouts, set this variable to a value less than or equal to 0.
+
+This feature requires Vim to be compiled with |+reltime| support.
+
+------------------------------------------------------------------------------
                                                       *<Plug>(PearTreeOpener)*
 Default: varies
 
@@ -230,7 +246,7 @@ Default: `<BS>`
 If the cursor is between an opener and closer, delete both. Otherwise, act
 like a typical backspace.
 
-Usage: return foo(|) -> return foo|
+Usage: `return foo(|)` -> `return foo|`
 
 To change the default mapping, add something like the following to your vimrc:
 >

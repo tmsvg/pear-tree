@@ -9,8 +9,8 @@ let s:save_cpo = &cpoptions
 set cpoptions&vim
 
 if v:version > 704 || (v:version == 704 && has('patch849'))
-    let s:LEFT = "\<C-g>U" . "\<Left>"
-    let s:RIGHT = "\<C-g>U" . "\<Right>"
+    let s:LEFT = "\<C-g>U\<Left>"
+    let s:RIGHT = "\<C-g>U\<Right>"
 else
     let s:LEFT = "\<Left>"
     let s:RIGHT = "\<Right>"
@@ -104,28 +104,31 @@ function! s:ShouldCloseSimpleOpener(char) abort
                         \ && strridx(getline('.'), l:pair[1], col('.')) == col('.') - 1
                         \ && l:prev_char =~# '\S'
                 return 0
+            else
+                return 1
             endif
         endif
-    endif
-    if !l:is_dumb && get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
-        " Ignore closers that are pending in s:strings_to_expand
-        let l:strings_to_expand = join(s:strings_to_expand, '')
-        let l:ignore = count(l:strings_to_expand, l:closer) - count(l:strings_to_expand, a:char)
-
-        let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1])
-        if l:closer_pos == [-1, -1] && l:ignore > 0
-            let l:closer_pos = pear_tree#cursor#Position()
-        else
-            let l:opener_pos = pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore)
-            if pear_tree#buffer#ComparePositions(l:opener_pos, [1, 0]) < 0
-                let l:opener_pos = [1, 0]
-            endif
-            let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, l:opener_pos)
-        endif
-        return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore) != [-1, -1]
-    else
+    elseif l:is_dumb || !get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
         return 1
     endif
+
+    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+
+    " Ignore closers that are pending in s:strings_to_expand
+    let l:strings_to_expand = join(s:strings_to_expand, '')
+    let l:ignore = count(l:strings_to_expand, l:closer) - count(l:strings_to_expand, a:char)
+
+    let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1], l:timeout_length)
+    if l:closer_pos == [-1, -1] && l:ignore > 0
+        let l:closer_pos = pear_tree#cursor#Position()
+    else
+        let l:opener_pos = pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore, l:timeout_length)
+        if pear_tree#buffer#ComparePositions(l:opener_pos, [1, 0]) < 0
+            let l:opener_pos = [1, 0]
+        endif
+        let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, l:opener_pos, l:timeout_length)
+    endif
+    return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore, l:timeout_length) != [-1, -1]
 endfunction
 
 
@@ -160,29 +163,32 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
                 \ && !has_key(pear_tree#Pairs(), l:next_char)
                 \ && pear_tree#GetSurroundingPair() == []
         return 0
-    elseif get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
-        let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
-        let l:cursor_pos = [line('.'), col('.') - 1]
-        if a:wildcard !=# ''
-            let l:closer_pos = pear_tree#GetOuterWildcardPair(a:opener, a:closer, l:trimmed_wildcard, l:cursor_pos)
-        else
-            let l:closer_pos = pear_tree#GetOuterPair(a:opener, a:closer, l:cursor_pos)
-        endif
-        " Ignore closers that are pending in s:strings_to_expand
-        let l:ignore = count(join(s:strings_to_expand, ''), a:closer)
-        if l:closer_pos == [-1, -1] && l:ignore > 0
-            let l:closer_pos = l:cursor_pos
-        endif
-        " An {opener} may be complete in the buffer if a smaller pair surrounds
-        " it (e.g. <: > and <*>: </*>), even if the user has not finished
-        " typing it. When skipping a closer such as `>`, s:ignore should be 1.
-        " Use it to ignore the {opener} being typed when checking pair balance.
-        let l:ignore = l:ignore + s:ignore
-        return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
-                    \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore, 1) != [-1, -1]
-    else
+    elseif !get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
         return 1
     endif
+
+    let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
+    let l:cursor_pos = [line('.'), col('.') - 1]
+
+    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+
+    if a:wildcard !=# ''
+        let l:closer_pos = pear_tree#GetOuterWildcardPair(a:opener, a:closer, l:trimmed_wildcard, l:cursor_pos, l:timeout_length)
+    else
+        let l:closer_pos = pear_tree#GetOuterPair(a:opener, a:closer, l:cursor_pos, l:timeout_length)
+    endif
+    " Ignore closers that are pending in s:strings_to_expand
+    let l:ignore = count(join(s:strings_to_expand, ''), a:closer)
+    if l:closer_pos == [-1, -1] && l:ignore > 0
+        let l:closer_pos = l:cursor_pos
+    endif
+    " An {opener} may be complete in the buffer if a smaller pair surrounds
+    " it (e.g. <: > and <*>: </*>), even if the user has not finished
+    " typing it. When skipping a closer such as `>`, s:ignore should be 1.
+    " Use it to ignore the {opener} being typed when checking pair balance.
+    let l:ignore = l:ignore + s:ignore
+    return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
+                \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard, l:closer_pos, l:ignore, l:timeout_length, 1) != [-1, -1]
 endfunction
 
 
@@ -204,19 +210,21 @@ function! s:ShouldSkipCloser(char) abort
     elseif !get(b:, 'pear_tree_smart_closers', get(g:, 'pear_tree_smart_closers', 0))
         return 1
     endif
+
+    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
     for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
         " Ignore closers that are pending in s:strings_to_expand
         let l:strings_to_expand = join(s:strings_to_expand, '')
         let l:ignore = count(l:strings_to_expand, a:char) - count(l:strings_to_expand, l:opener)
 
-        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1])
-        let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore)
-        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, l:opener_pos)
+        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, [line('.'), col('.') - 1], l:timeout_length)
+        let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore, l:timeout_length)
+        let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, l:opener_pos, l:timeout_length)
 
         if l:closer_pos == [-1, -1]
             let l:closer_pos = pear_tree#cursor#Position()
         endif
-        if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore + 1) == [-1, -1]
+        if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore + 1, l:timeout_length) == [-1, -1]
             return 1
         endif
     endfor
@@ -244,20 +252,21 @@ function! s:ShouldDeletePair() abort
         return 0
     elseif pear_tree#IsDumbPair(l:prev_char)
         return 1
-    elseif get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
-        " Ignore closers that are pending in s:strings_to_expand
-        let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
-
-        let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, [line('.'), col('.') - 1])
-        let l:opener_pos = pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore)
-        let l:opener_pos[1] += 1
-        let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, l:opener_pos)
-
-        " Will deleting both make the next closer unbalanced?
-        return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore) == [-1, -1]
-    else
+    elseif !get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
         return 1
     endif
+
+    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+
+    " Ignore closers that are pending in s:strings_to_expand
+    let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
+
+    let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, [line('.'), col('.') - 1], l:timeout_length)
+    let l:opener_pos = pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore, l:timeout_length)
+    let l:opener_pos[1] += 1
+    let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, l:opener_pos, l:timeout_length)
+
+    return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore, l:timeout_length) == [-1, -1]
 endfunction
 
 
