@@ -4,32 +4,44 @@ A painless, powerful Vim auto-pair plugin.
 
 Purpose
 -------
-**Pear Tree** automatically pairs parentheses, quotes, HTML tags, and many other text items based on a simple-to-define set of rules, and provides pair-wise deletion, newline expansion, and other usual auto-pair features, all without interfering with Vim's undo or dot-repeat functionality.
+**Pear Tree** automatically pairs parentheses, quotes, HTML tags, and many
+other text items based on a simple-to-define set of rules. It also provides
+pair-wise deletion, newline expansion, and other typical auto-pair features
+without interfering with Vim's undo or dot-repeat functionality.
 
 Installation
 ------------
-Follow the instructions provided by your plugin manager. Using [vim-plug](https://github.com/junegunn/vim-plug), you would place the following in your vimrc and run `:PlugInstall`
+Follow the instructions provided by your plugin manager. Using
+[vim-plug](https://github.com/junegunn/vim-plug), you would place the
+following in your vimrc and run `:PlugInstall`
 
 ```vim
 Plug 'tmsvg/pear-tree'
 ```
 
-You can also install Pear Tree manually by placing the files in their appropriate locations in your Vim directory. Remember to run `:helptags` if you choose this method.
+You can also install Pear Tree manually by placing the files in their
+appropriate locations in your Vim directory. Remember to run `:helptags` if
+you choose this method.
 
 Features
 --------
-
 ### Multi-Character Pair Support
 
-Pear Tree is not limited to pairing single characters like `(` with `)`, `{` with `}`, and so on. If you would like to pair, say, `/*` with `*/` or `<!--` with `-->`, it works just as well.
+Pear Tree is not limited to pairing single characters like `(` with `)`, `{`
+with `}`, and so on. If you would like to pair, say, `/*` with `*/` or `<!--`
+with `-->`, it works just as well.
 
 ### Wildcard Support
 
-A powerful feature of Pear Tree is its support for wildcard string matching. This is particularly useful for HTML tags, wherein there can be strings of some arbitrary length between the `<` and `>` characters (e.g. `<body>`, `<ul>`, `<p class="Foo">`).
+A powerful feature of Pear Tree is its support for wildcard string matching.
+This is particularly useful for HTML tags, wherein there can be strings of
+some arbitrary length between the `<` and `>` characters (e.g. `<body>`,
+`<ul>`, `<p class="Foo">`).
 
 ### Dot-Repeatability
 
-Pear Tree allows brace expansion without breaking Vim's dot-repeat *or* undo functionality. Consider this example:
+Pear Tree allows brace expansion without breaking Vim's dot-repeat *or* undo
+functionality. Consider this example:
 
 ```c
 1  int foo();|
@@ -55,7 +67,8 @@ Type `<CR>`:
 5  int bar();
 ```
 
-Note that the closing pair disappears after pressing `<CR>`. This is required to not break dot-repeat, but it will be automatically restored later.
+Note that the closing pair disappears after pressing `<CR>`. This is required
+to not break dot-repeat, but it will be automatically restored later.
 
 Next, type `return 1;` and leave insert mode:
 
@@ -79,34 +92,32 @@ Finally, move to line 5 and use the `.` command:
 7  }|
 ```
 
-Many implementations of this feature cause the `.` command to only repeat `return 1;` instead of the entire typing sequence.
+Many implementations of this feature cause the `.` command to only repeat
+`return 1;` instead of the entire typing sequence.
 
 ### Smart Pairing
 
-Pear Tree includes options to intelligently decide when an opening string should be closed, when typing a closing character should move the cursor past an existing closer, and when both characters in a pair should be deleted when pressing backspace.
+Pear Tree includes options to intelligently decide when an opening string
+should be closed, when typing a closing character should move the cursor past
+an existing closer, and when both characters in a pair should be deleted when
+pressing backspace. If these options are enabled, Pear Tree will examine the
+balance of existing pairs to decide what action should be taken. It will choose
+the action that makes nearby pairs properly balanced, as summarized in the
+following table:
 
-- Smart Openers:
-
-    - `foo(bar|))`
-    - `foo(bar(|))` instead of `foo(bar(|)))`
-
-- Smart Closers:
-
-    - `foo(bar(|)`
-    - `foo(bar()|)` instead of `foo(bar()|`
-
-- Smart Backspace:
-
-    - `foo((|)`
-    - `foo(|)` instead of `foo(|`
+|           | Before        | After (smart pairing) | After (no smart pairing)
+| --------- | ------------- | --------------------- | ------------------------ |
+| Opener    | `foo(bar\|))` | `foo(bar(\|))`        | `foo(bar(\|)))`          |
+| Closer    | `foo(bar(\|)` | `foo(bar(\|))`        | `foo(bar()\|`            |
+| Backspace | `foo((\|)`    | `foo(\|)`             | `foo(\|`                 |
 
 Smart pairs must be [enabled manually](#defaults).
 
-
 Usage
 -----
-Pear Tree's primary features are enabled automatically, but some useful options and mappings must be set manually. Please read `:help pear-tree` for information on using and configuring Pear Tree.
-
+Pear Tree's primary features are enabled automatically, but some useful
+options and mappings must be set manually. Please read `:help pear-tree` for
+information on using and configuring Pear Tree.
 
 ### Defaults
 
@@ -129,14 +140,14 @@ let g:pear_tree_smart_openers = 0
 let g:pear_tree_smart_closers = 0
 let g:pear_tree_smart_backspace = 0
 
-" If enabled, smart pair functions timeout after 60ms.
+" If enabled, smart pair functions timeout after 60ms
 let g:pear_tree_timeout = 60
 
 " Default mappings:
 imap <BS> <Plug>(PearTreeBackspace)
 imap <CR> <Plug>(PearTreeExpand)
 imap <ESC> <Plug>(PearTreeFinishExpansion)
-" Pear Tree also makes <Plug> mappings for each pair's opening and closing strings.
+" Pear Tree also makes <Plug> mappings for each opening and closing string.
 "     :help <Plug>(PearTreeOpener)
 "     :help <Plug>(PearTreeCloser)
 
@@ -148,5 +159,4 @@ imap <ESC> <Plug>(PearTreeFinishExpansion)
 
 License
 -------
-
 MIT
