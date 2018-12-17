@@ -123,10 +123,16 @@ function! s:ShouldCloseSimpleOpener(char) abort
         let l:closer_pos = pear_tree#cursor#Position()
     else
         let l:opener_pos = pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore, l:timeout_length)
-        if pear_tree#buffer#ComparePositions(l:opener_pos, [1, 0]) < 0
+        if l:opener_pos == [-1, -1]
             let l:opener_pos = [1, 0]
+        elseif l:opener_pos == [0, 0]
+            " Function timed out
+            return 0
         endif
         let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, l:opener_pos, l:timeout_length)
+        if l:closer_pos == [0, 0]
+            return 1
+        endif
     endif
     return l:closer_pos == [-1, -1] || pear_tree#IsBalancedPair(a:char, '', l:closer_pos, l:ignore, l:timeout_length) != [-1, -1]
 endfunction
@@ -221,10 +227,12 @@ function! s:ShouldSkipCloser(char) abort
         let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore, l:timeout_length)
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char, l:opener_pos, l:timeout_length)
 
-        if l:closer_pos == [-1, -1]
+        if l:closer_pos[0] < 1
             let l:closer_pos = pear_tree#cursor#Position()
         endif
-        if l:closer_pos[0] != -1 && pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore + 1, l:timeout_length) == [-1, -1]
+        " IsBalancedPair returns [0, 0] if and only if it times out.
+        let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '', l:closer_pos, l:ignore + 1, l:timeout_length)
+        if l:closer_pos[0] != -1 && l:opener_pos[0] <= 0
             return 1
         endif
     endfor
@@ -266,7 +274,8 @@ function! s:ShouldDeletePair() abort
     let l:opener_pos[1] += 1
     let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, l:opener_pos, l:timeout_length)
 
-    return pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore, l:timeout_length) == [-1, -1]
+    " GetOuterPair and IsBalancedPair return [0, 0] if they time out.
+    return l:closer_pos[0] != 0 && pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore, l:timeout_length)[0] <= 0
 endfunction
 
 
