@@ -108,7 +108,7 @@ following table:
 |           | Before        | After (smart pairing) | After (no smart pairing)
 | --------- | ------------- | --------------------- | ------------------------ |
 | Opener    | `foo(bar\|))` | `foo(bar(\|))`        | `foo(bar(\|)))`          |
-| Closer    | `foo(bar(\|)` | `foo(bar(\|))`        | `foo(bar()\|`            |
+| Closer    | `foo(bar(\|)` | `foo(bar()\|)`        | `foo(bar()\|`            |
 | Backspace | `foo((\|)`    | `foo(\|)`             | `foo(\|`                 |
 
 Smart pairs must be [enabled manually](#defaults).
