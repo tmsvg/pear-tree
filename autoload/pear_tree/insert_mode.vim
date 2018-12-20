@@ -39,8 +39,10 @@ function! s:CorrectTraverser() abort
         call b:traverser.TraverseBuffer([1, 0], [line('.'), col('.') - 1])
         let s:lost_track = 0
     elseif pumvisible()
-        " Characters inserted by autocomplete are not caught by InsertCharPre,
-        call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [line('.'), col('.') - 1])
+        let l:old_pos = [s:current_line, s:current_column - 1]
+        let l:new_pos = [line('.'), col('.') - 1]
+        " Characters inserted by autocomplete are not caught by InsertCharPre.
+        call b:traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
     endif
 endfunction
 
@@ -61,14 +63,16 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
     if l:new_line != s:current_line || l:new_col < s:current_column
         let s:lost_track = 1
     elseif l:new_col > s:current_column
+        let l:old_pos = [s:current_line, s:current_column - 1]
+        let l:new_pos = [l:new_line, l:new_col - 1]
         if s:lost_track
             call b:traverser.Reset()
-            call b:traverser.TraverseBuffer([1, 0], [l:new_line, l:new_col - 1])
+            call b:traverser.TraverseBuffer([1, 0], l:new_pos)
             let s:lost_track = 0
         elseif b:traverser.AtRoot()
-            call b:traverser.TraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
+            call b:traverser.TraverseBuffer(l:old_pos, l:new_pos)
         else
-            call b:traverser.WeakTraverseBuffer([s:current_line, s:current_column - 1], [l:new_line, l:new_col - 1])
+            call b:traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
             if b:traverser.AtEndOfString()
                 call b:traverser.Reset()
             endif
@@ -100,23 +104,28 @@ function! s:ShouldCloseSimpleOpener(char) abort
             if l:pair == []
                 return 0
             elseif l:is_dumb
-                        \ && pear_tree#buffer#ComparePositions([line('.'), col('.') - 2], get(l:pair, 3, [-1, -1])) != 0
-                        \ && strridx(getline('.'), l:pair[1], col('.')) == col('.') - 1
-                        \ && l:prev_char =~# '\S'
-                return 0
-            else
-                return 1
+                let [l:opener, l:closer, l:wildcard, l:pair_pos] = l:pair
+                let l:lnum = line('.')
+                let l:col = col('.')
+                let l:line = getline(l:lnum)
+                if [l:lnum, l:col - 2] != l:pair_pos
+                            \ && strridx(l:line, l:closer, l:col) == l:col - 1
+                            \ && l:prev_char =~# '\S'
+                    return 0
+                endif
             endif
+            return 1
         endif
-    elseif l:is_dumb || !get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
+    elseif l:is_dumb || !pear_tree#GetOption('smart_openers')
         return 1
     endif
 
-    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+    let l:timeout_length = pear_tree#GetOption('timeout')
 
     " Ignore closers that are pending in s:strings_to_expand
     let l:strings_to_expand = join(s:strings_to_expand, '')
-    let l:ignore = count(l:strings_to_expand, l:closer) - count(l:strings_to_expand, a:char)
+    let l:ignore = count(l:strings_to_expand, l:closer)
+    let l:ignore = l:ignore - count(l:strings_to_expand, a:char)
 
     let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, [line('.'), col('.') - 1], l:timeout_length)
     if l:closer_pos == [-1, -1] && l:ignore > 0
@@ -131,6 +140,7 @@ function! s:ShouldCloseSimpleOpener(char) abort
         endif
         let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer, l:opener_pos, l:timeout_length)
         if l:closer_pos == [0, 0]
+            " Function timed out
             return 1
         endif
     endif
@@ -140,8 +150,10 @@ endfunction
 
 function! pear_tree#insert_mode#CloseSimpleOpener(char) abort
     if s:ShouldCloseSimpleOpener(a:char)
-        let l:closer = pear_tree#GenerateCloser(a:char, '', pear_tree#cursor#Position())
-        return l:closer . repeat(s:LEFT, pear_tree#string#VisualLength(l:closer))
+        let l:pos = pear_tree#cursor#Position()
+        let l:closer = pear_tree#GenerateCloser(a:char, '', l:pos)
+        let l:closer_length = pear_tree#string#VisualLength(l:closer)
+        return l:closer . repeat(s:LEFT, l:closer_length)
     else
         return ''
     endif
@@ -160,7 +172,8 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
         return 0
     elseif pear_tree#IsDumbPair(l:next_char)
         return 0
-    elseif pear_tree#IsDumbPair(a:opener) && l:prev_text[-strlen(a:opener):] ==# a:opener
+    elseif pear_tree#IsDumbPair(a:opener)
+                \ && l:prev_text[-strlen(a:opener):] ==# a:opener
         return 0
     " The cursor should also be at the end of the line, before whitespace,
     " or between another pair.
@@ -169,14 +182,14 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
                 \ && !has_key(pear_tree#Pairs(), l:next_char)
                 \ && pear_tree#GetSurroundingPair() == []
         return 0
-    elseif !get(b:, 'pear_tree_smart_openers', get(g:, 'pear_tree_smart_openers', 0))
+    elseif !pear_tree#GetOption('smart_openers')
         return 1
     endif
 
     let l:trimmed_wildcard = pear_tree#TrimWildcard(a:opener, a:wildcard)
     let l:cursor_pos = [line('.'), col('.') - 1]
 
-    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+    let l:timeout_length = pear_tree#GetOption('timeout')
 
     if a:wildcard !=# ''
         let l:closer_pos = pear_tree#GetOuterWildcardPair(a:opener, a:closer, l:trimmed_wildcard, l:cursor_pos, l:timeout_length)
@@ -213,11 +226,11 @@ function! s:ShouldSkipCloser(char) abort
         return 0
     elseif pear_tree#IsDumbPair(a:char)
         return 1
-    elseif !get(b:, 'pear_tree_smart_closers', get(g:, 'pear_tree_smart_closers', 0))
+    elseif !pear_tree#GetOption('smart_closers')
         return 1
     endif
 
-    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+    let l:timeout_length = pear_tree#GetOption('timeout')
     for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# a:char'))
         " Ignore closers that are pending in s:strings_to_expand
         let l:strings_to_expand = join(s:strings_to_expand, '')
@@ -260,11 +273,11 @@ function! s:ShouldDeletePair() abort
         return 0
     elseif pear_tree#IsDumbPair(l:prev_char)
         return 1
-    elseif !get(b:, 'pear_tree_smart_backspace', get(g:, 'pear_tree_smart_backspace', 0))
+    elseif !pear_tree#GetOption('smart_backspace')
         return 1
     endif
 
-    let l:timeout_length = get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0))
+    let l:timeout_length = pear_tree#GetOption('smart_timeout')
 
     " Ignore closers that are pending in s:strings_to_expand
     let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
@@ -275,7 +288,7 @@ function! s:ShouldDeletePair() abort
     let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char, l:opener_pos, l:timeout_length)
 
     " GetOuterPair and IsBalancedPair return [0, 0] if they time out.
-    return l:closer_pos[0] != 0 && pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore, l:timeout_length)[0] <= 0
+    return l:closer_pos[0] != 0 && pear_tree#IsBalancedPair(l:prev_char, '', l:closer_pos, l:ignore, l:timeout_length)[0] < 1
 endfunction
 
 
@@ -299,10 +312,11 @@ function! pear_tree#insert_mode#PrepareExpansion() abort
     endif
     let l:opener_pos = l:pair[3]
     let l:cursor_pos = pear_tree#cursor#Position()
-    if l:opener_pos[0] == l:cursor_pos[0] && l:opener_pos[1] == l:cursor_pos[1] - 2
+    if l:opener_pos == [l:cursor_pos[0], l:cursor_pos[1] - 2]
         let l:text_after_cursor = pear_tree#cursor#TextAfter()
+        let l:text_length = pear_tree#string#VisualLength(l:text_after_cursor)
         call add(s:strings_to_expand, l:text_after_cursor)
-        return repeat("\<Del>", pear_tree#string#VisualLength(l:text_after_cursor)) . "\<CR>"
+        return repeat("\<Del>", l:text_length) . "\<CR>"
     else
         return "\<CR>"
     endif
@@ -316,9 +330,10 @@ function! pear_tree#insert_mode#Expand() abort
         let l:expanded_strings = join(reverse(s:strings_to_expand), "\<CR>")
         let s:strings_to_expand = []
         let [l:lnum, l:col] = pear_tree#cursor#Position()
+        let l:restore_pos = string([l:lnum, max([l:col - 1, 1])])
         return repeat(s:RIGHT, col('$') - l:col)
                     \ . "\<CR>" . l:expanded_strings . "\<Esc>"
-                    \ . ':call cursor(' . string([l:lnum, max([l:col - 1, 1])]) . ')' . "\<CR>"
+                    \ . ':call cursor(' . l:restore_pos . ')' . "\<CR>"
     endif
 endfunction
 

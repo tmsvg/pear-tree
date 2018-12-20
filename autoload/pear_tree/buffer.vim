@@ -20,7 +20,8 @@ function! pear_tree#buffer#Search(string, start_position, ...) abort
     let l:lnum = a:start_position[0]
     let l:line = getline(l:lnum)
     let l:col = stridx(l:line, a:string, a:start_position[1])
-    while l:lnum <= line('$') && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
+    let l:end = line('$')
+    while l:lnum <= l:end && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
         if l:col == -1
             let l:lnum = l:lnum + 1
             let l:line = getline(l:lnum)

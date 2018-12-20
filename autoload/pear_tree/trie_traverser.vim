@@ -43,32 +43,33 @@ function! s:StepToChild(char) dict abort
         let l:self.current = pear_tree#trie#GetChild(l:self.current, a:char)
         let l:self.string = l:self.string . a:char
         return 1
+    endif
     " Try stepping to a wildcard node.
-    elseif pear_tree#trie#HasChild(l:self.current, l:self.trie.wildcard_symbol)
-        let l:self.current = pear_tree#trie#GetChild(l:self.current, l:self.trie.wildcard_symbol)
-        let l:self.string = l:self.string . l:self.trie.wildcard_symbol
+    let l:wildcard_symbol = l:self.trie.wildcard_symbol
+    if pear_tree#trie#HasChild(l:self.current, l:wildcard_symbol)
+        let l:self.current = pear_tree#trie#GetChild(l:self.current, l:wildcard_symbol)
+        let l:self.string = l:self.string . l:wildcard_symbol
         let l:self.wildcard_string = l:self.wildcard_string . a:char
         return 1
     elseif l:self.AtWildcard()
         let l:self.wildcard_string = l:self.wildcard_string . a:char
         return 1
+    endif
     " Reached dead end. Attempt to go back to a wildcard node.
+    let l:node = l:self.Backtrack(l:wildcard_symbol)
+    if l:node != {}
+        let l:self.current = l:node
+
+        let l:string = pear_tree#trie#Prefix(l:self.trie, l:self.current)
+        let l:string_len = strlen(l:string)
+        let l:string = pear_tree#string#Encode(l:string, '*', l:wildcard_symbol)
+
+        let l:self.wildcard_string = l:self.GetString()[l:string_len - 1:]
+        let l:self.string = l:string
+
+        return l:self.StepToChild(a:char)
     else
-        let l:node = l:self.Backtrack(l:self.trie.wildcard_symbol)
-        if l:node != {}
-            let l:self.current = l:node
-
-            let l:new_string = pear_tree#trie#Prefix(l:self.trie, l:self.current)
-            let l:new_string_len = strlen(l:new_string)
-            let l:new_string = pear_tree#string#Encode(l:new_string, '*', l:self.trie.wildcard_symbol)
-
-            let l:self.wildcard_string = l:self.GetString()[l:new_string_len - 1:]
-            let l:self.string = l:new_string
-
-            return l:self.StepToChild(a:char)
-        else
-            return 0
-        endif
+        return 0
     endif
 endfunction
 
@@ -76,7 +77,8 @@ endfunction
 " Attempt to step to {char} in the trie. If this fails, or the traverser is
 " already at the end of the trie, reset the traverser.
 function! s:StepOrReset(char) dict abort
-    if !l:self.StepToChild(a:char) || (l:self.current.children == {} && !l:self.AtWildcard())
+    if !l:self.StepToChild(a:char)
+                \ || (l:self.current.children == {} && !l:self.AtWildcard())
         call l:self.Reset()
     endif
 endfunction
@@ -158,8 +160,9 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
             " When no more wildcard strings are found in the buffer, skip to
             " the end minus the length of the longest string in the trie.
             if l:wildcards == []
+                let l:max_len = max(map(copy(l:strings), 'strlen(v:val)'))
                 let l:pos = copy(a:end_pos)
-                let l:pos[1] = max([0, l:pos[1] - max(map(copy(l:strings), 'strlen(v:val)'))])
+                let l:pos[1] = max([0, l:pos[1] - l:max_len])
             else
                 let l:pos = pear_tree#buffer#MinPosition(l:positions)
             endif
@@ -201,13 +204,13 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
         if l:self.AtWildcard()
             let l:positions = [a:end_pos]
             let l:str = pear_tree#string#Decode(l:self.string, '*', l:self.trie.wildcard_symbol)
-            for l:char in keys(l:self.current.children)
-                if has_key(pear_tree#Pairs(), l:str . l:char)
-                    let l:not_in = pear_tree#GetRule(l:str . l:char, 'not_in')
+            for l:ch in keys(l:self.current.children)
+                if has_key(pear_tree#Pairs(), l:str . l:ch)
+                    let l:not_in = pear_tree#GetRule(l:str . l:ch, 'not_in')
                 else
                     let l:not_in = []
                 endif
-                let l:search_pos = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
+                let l:search_pos = pear_tree#buffer#Search(l:ch, l:pos, l:not_in)
                 if l:search_pos != [-1, -1]
                     call add(l:positions, l:search_pos)
                 endif

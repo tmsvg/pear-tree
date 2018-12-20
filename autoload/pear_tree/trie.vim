@@ -49,8 +49,8 @@ function! s:GetStrings(node, string) abort
         return [a:string]
     endif
     let l:strings = []
-    for l:ch in keys(a:node.children)
-        call extend(l:strings, s:GetStrings(a:node.children[l:ch], a:string . l:ch))
+    for [l:ch, l:node] in items(a:node.children)
+        call extend(l:strings, s:GetStrings(l:node, a:string . l:ch))
     endfor
     return l:strings
 endfunction
@@ -68,7 +68,8 @@ function! pear_tree#trie#Prefix(trie, node) abort
         let l:string = add(l:string, l:current.char)
         let l:current = l:current.parent
     endwhile
-    return pear_tree#string#Decode(join(reverse(l:string), ''), '*', a:trie.wildcard_symbol)
+    let l:string = join(reverse(l:string))
+    return pear_tree#string#Decode(l:string, '*', a:trie.wildcard_symbol)
 endfunction
 
 

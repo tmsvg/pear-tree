@@ -24,18 +24,24 @@ else
 endif
 
 if exists('*reltimefloat')
-    function! s:ReltimeFloat(reltime) abort
-        return reltimefloat(a:reltime) * 1000
+    function! s:TimeElapsed(start_time) abort
+        return reltimefloat(reltime(a:start_time)) * 1000
     endfunction
-else
-    function! s:ReltimeFloat(reltime) abort
-        return str2float(reltimestr(a:reltime)) * 1000
+elseif !has('reltime')
+    function! s:TimeElapsed(start_time) abort
+        return str2float(reltimestr(reltime(a:start_time))) * 1000
     endfunction
 endif
 
 
 function! pear_tree#Pairs() abort
     return get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
+endfunction
+
+
+function! pear_tree#GetOption(option)
+    let l:var_name = 'pear_tree_' . a:option
+    return get(b:, l:var_name, get(g:, l:var_name, 0))
 endfunction
 
 
@@ -46,7 +52,8 @@ endfunction
 
 
 function! pear_tree#IsDumbPair(char) abort
-    return has_key(pear_tree#Pairs(), a:char) && pear_tree#GetRule(a:char, 'closer') ==# a:char
+    return has_key(pear_tree#Pairs(), a:char)
+                \ && pear_tree#GetRule(a:char, 'closer') ==# a:char
 endfunction
 
 
@@ -74,9 +81,10 @@ function! pear_tree#GenerateCloser(opener, wildcard, position) abort
         return ''
     endif
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-    if (a:position[0] > 0 && l:not_in != []
-                \ && pear_tree#buffer#SyntaxRegion(a:position) =~? join(l:not_in, '\|'))
-        return ''
+    if a:position[0] > 0 && l:not_in != []
+        if pear_tree#buffer#SyntaxRegion(a:position) =~? join(l:not_in, '\|')
+            return ''
+        endif
     endif
     let l:closer = pear_tree#GetRule(a:opener, 'closer')
     if a:wildcard ==# ''
@@ -149,7 +157,8 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
     let l:closer_pos = [a:start[0], a:start[1] + 1]
     let l:opener_pos = [a:start[0], a:start[1] + 1]
     while l:current_pos[0] > -1
-        if l:timeout_length > 0 && s:ReltimeFloat(reltime(l:start_time)) >= l:timeout_length
+        if l:timeout_length > 0
+                    \ && s:TimeElapsed(l:start_time) >= l:timeout_length
             return [0, 0]
         endif
         " Find the previous opener and closer in the buffer.
@@ -181,21 +190,26 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
         if l:closer_pos[0] != -1
                     \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + l:closer_offset], l:opener_pos) >= 0
             let l:count = l:count + 1
-            let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]
-            " It's not feasible to determine if dumb pairs are balanced in the buffer, so leave early at this point.
+            " It's not feasible to determine if dumb pairs are balanced in the
+            " buffer, so leave early at this point.
             if l:is_dumb
                 if l:has_wildcard
                     return l:opener_pos
-                " Ensure that the opener does not overlap the starting position.
-                elseif abs(a:start[1] - l:opener_pos[1]) >= strlen(a:opener) || l:opener_pos[0] != a:start[0]
-                    return [l:opener_pos[0], l:opener_pos[1] + strlen(a:opener) - 1]
+                " Ensure that the opener doesn't overlap the starting position.
+                elseif l:opener_pos[0] != a:start[0]
+                            \ || abs(a:start[1] - l:opener_pos[1]) >= strlen(a:opener)
+                    let l:opener_pos[1] += strlen(a:opener) - 1
+                    return l:opener_pos
                 endif
             endif
+            let l:current_pos = [l:closer_pos[0], l:closer_pos[1] - 1]
         elseif l:opener_pos[0] != -1 && l:count != 0
             let l:count = l:count - 1
             if l:count == 0
-                return l:has_wildcard ? l:opener_pos
-                                    \ : [l:opener_pos[0], l:opener_pos[1] + strlen(l:opener_hint) - 1]
+                if !l:has_wildcard
+                    let l:opener_pos[1] += strlen(l:opener_hint) - 1
+                endif
+                return l:opener_pos
             endif
             let l:current_pos = [l:opener_pos[0], l:opener_pos[1] - 1]
         else
@@ -209,12 +223,13 @@ endfunction
 " Return the opener and closer that surround the cursor, as well as the
 " wildcard string and the position of the opener.
 function! pear_tree#GetSurroundingPair() abort
-    let l:closers = map(keys(pear_tree#Pairs()), 'pear_tree#GetRule(v:val, ''closer'')')
+    let l:closers = map(values(pear_tree#Pairs()), 'v:val.closer')
     let l:closer_trie = pear_tree#trie#New(l:closers)
     let l:closer_traverser = pear_tree#trie_traverser#New(l:closer_trie)
 
     let l:start = [line('.'), col('.') - 1]
-    if l:closer_traverser.WeakTraverseBuffer(l:start, pear_tree#buffer#End())[0] == -1
+    let l:end = pear_tree#buffer#End()
+    if l:closer_traverser.WeakTraverseBuffer(l:start, l:end) == [-1, -1]
         return []
     endif
     let l:closer = l:closer_traverser.GetString()
@@ -248,7 +263,8 @@ function! pear_tree#GetOuterPair(opener, closer, start, ...) abort
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
     while l:opener_pos != [-1, -1]
                 \ && pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-        if l:timeout_length > 0 && s:ReltimeFloat(reltime(l:start_time)) >= l:timeout_length
+        if l:timeout_length > 0
+                    \ && s:TimeElapsed(l:start_time) >= l:timeout_length
             return [0, 0]
         endif
         let l:opener_pos[1] += 1
@@ -290,11 +306,12 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start, ...) a
 
     let l:opener_pos = pear_tree#buffer#Search(l:opener_hint, a:start)
     let l:closer_pos = pear_tree#buffer#Search(a:closer, a:start, l:not_in)
+    let l:end = pear_tree#buffer#End()
     while l:opener_pos != [-1, -1]
                 \ && (pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                \     || l:traverser.WeakTraverseBuffer(l:opener_pos, pear_tree#buffer#End()) == [-1, -1]
+                \     || l:traverser.WeakTraverseBuffer(l:opener_pos, l:end) == [-1, -1]
                 \     || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
-        if l:timeout_length > 0 && s:ReltimeFloat(reltime(l:start_time)) >= l:timeout_length
+        if l:timeout_length > 0 && s:TimeElapsed(l:start_time) >= l:timeout_length
             return [0, 0]
         endif
         let l:opener_pos[1] += 1
@@ -305,7 +322,7 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start, ...) a
         endif
     endwhile
     if l:opener_pos == [-1, -1]
-        let l:opener_pos = pear_tree#buffer#End()
+        let l:opener_pos = l:end
     endif
     let l:closer_pos = pear_tree#buffer#ReverseSearch(a:closer, l:opener_pos, l:not_in)
     if pear_tree#buffer#ComparePositions(l:closer_pos, a:start) < 0
