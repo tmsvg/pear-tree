@@ -27,7 +27,7 @@ if exists('*reltimefloat')
     function! s:TimeElapsed(start_time) abort
         return reltimefloat(reltime(a:start_time)) * 1000
     endfunction
-elseif !has('reltime')
+else
     function! s:TimeElapsed(start_time) abort
         return str2float(reltimestr(reltime(a:start_time))) * 1000
     endfunction

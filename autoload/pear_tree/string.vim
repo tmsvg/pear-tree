@@ -9,18 +9,16 @@ let s:save_cpo = &cpoptions
 set cpoptions&vim
 
 
-" Return {string} with all leading a trailing whitespace removed.
-function! pear_tree#string#Trim(string) abort
-    let l:start = 0
-    let l:end = strlen(a:string)
-    while l:start < l:end && a:string[l:start] <=# ' '
-        let l:start = l:start + 1
-    endwhile
-    while l:start < l:end && a:string[l:end - 1] <=# ' '
-        let l:end = l:end - 1
-    endwhile
-    return a:string[(l:start):(l:end - 1)]
-endfunction
+" Return {string} with all leading and trailing whitespace removed.
+if exists('*trim')
+    function! pear_tree#string#Trim(string) abort
+        return trim(a:string)
+    endfunction
+else
+    function! pear_tree#string#Trim(string) abort
+        return substitute(a:string, '\v^\s*(.{-})\s*$', '\1', '')
+    endfunction
+endif
 
 
 " Return {string} with all occurrences of {special_char} escaped and all
@@ -72,11 +70,11 @@ endfunction
 " Useful for special characters like <BS> and full-width UNICODE, etc., in
 " order to get the number of times <DIRECTION> must be pressed to move over
 " the string.
-function! pear_tree#string#VisualLength(str) abort
-    if strwidth(a:str) >= strlen(a:str)
-        return strlen(a:str) - (strwidth(a:str) - strlen(a:str))
+function! pear_tree#string#VisualLength(string) abort
+    if strwidth(a:string) >= strlen(a:string)
+        return strlen(a:string) - (strwidth(a:string) - strlen(a:string))
     else
-        return strchars(a:str)
+        return strchars(a:string)
     endif
 endfunction
 
