@@ -51,7 +51,7 @@ function! s:BufferEnable()
     call s:CreatePlugMappings()
     if get(b:, 'pear_tree_timeout', get(g:, 'pear_tree_timeout', 0)) > 0 && !has('reltime')
         echohl WarningMsg
-        echom "Pear Tree: pear_tree_timeout requires Vim compiled with reltime support."
+        echom 'Pear Tree: pear_tree_timeout requires Vim compiled with reltime support.'
         echohl None
         let b:pear_tree_timeout = 0
         let g:pear_tree_timeout = 0

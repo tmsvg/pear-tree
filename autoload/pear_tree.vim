@@ -39,7 +39,7 @@ function! pear_tree#Pairs() abort
 endfunction
 
 
-function! pear_tree#GetOption(option)
+function! pear_tree#GetOption(option) abort
     let l:var_name = 'pear_tree_' . a:option
     return get(b:, l:var_name, get(g:, l:var_name, 0))
 endfunction

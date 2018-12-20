@@ -368,6 +368,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
         let l:opener_end = "\<DEL>" . a:char
     elseif has_key(pear_tree#Pairs(), a:char)
+                \ && (b:traverser.AtRoot() || b:traverser.AtWildcard())
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
         let l:opener_end = a:char
