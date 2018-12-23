@@ -184,7 +184,8 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
     endif
 
     let l:valid_before = !pear_tree#IsDumbPair(a:opener)
-                \ || l:prev_text[:-strlen(a:opener)][:-1] !~# '\S'
+                \ || (l:prev_text[:-strlen(a:opener)][-1:] !~# '\w'
+                \     && l:prev_text[-strlen(a:opener):] !=# a:opener)
     let l:valid_after = pear_tree#cursor#AtEndOfLine()
                 \ || l:next_char =~# '\s'
                 \ || has_key(pear_tree#Pairs(), l:next_char)
