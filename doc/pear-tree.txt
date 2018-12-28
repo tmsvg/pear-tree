@@ -1,81 +1,91 @@
 *pear-tree.txt*    A painless, powerful Vim auto-pair plugin
 
                                   Pear Tree
-Contents                                                           *pear-tree*
+CONTENTS                                                           *pear-tree*
 
-    1. Introduction ....................... |pear-tree-introduction|
-    2. Configuration ...................... |pear-tree-configuration|
+    1. Introduction ........................ |pear-tree-introduction|
+    2. Requirements ........................ |pear-tree-requirements|
+    3. Configuration ....................... |pear-tree-configuration|
 
 ==============================================================================
-1. Introduction                                       *pear-tree-introduction*
+INTRODUCTION                                          *pear-tree-introduction*
 
 Pear Tree automatically pairs parentheses, quotes, HTML tags, and many other
-text items based on a simple-to-define set of rules, and provides pair-wise
-deletion, newline expansion, and other usual auto-pair features.
+text items based on an easily defined set of rules. It also provides pair-wise
+deletion, newline expansion, and other typical auto-pair features without
+interfering with Vim's undo or dot-repeat functionality.
 
-Pear Tree aims to be non-intrusive and does not break Vim's built-in
-dot-repeat or undo functionality.
+Each of these auto-pairing actions may be done intelligently using Pear Tree's
+smart pair options. If these options are enabled, Pear Tree will examine the
+balance of existing pairs to decide what action it should take to maintain or
+restore pair balance in the buffer.
 
 ==============================================================================
-2. Configuration                                     *pear-tree-configuration*
+REQUIREMENTS                                          *pear-tree-requirements*
 
-Variables:
+Pear Tree requires Vim version 7.4 or greater for its basic functionality,
+though a version greater than 7.4.849 is recommended, as this version allows
+Pear Tree to work properly with dot-repeat and undo.
 
-    g:pear_tree_pairs ..................... |g:pear_tree_pairs|
-    g:pear_tree_ft_disabled ............... |g:pear_tree_ft_disabled|
-    g:pear_tree_smart_openers ............. |g:pear_tree_smart_openers|
-    g:pear_tree_smart_closers ............. |g:pear_tree_smart_closers|
-    g:pear_tree_smart_backspace ........... |g:pear_tree_smart_backspace|
-    g:pear_tree_timeout ................... |g:pear_tree_timeout|
+Smart pairs can make use of timeouts to prevent noticeable delays when typing
+in insert mode. This requires Vim to be compiled with |+reltime| support.
+
+==============================================================================
+CONFIGURATION                                        *pear-tree-configuration*
+
+Options:
+    g:pear_tree_pairs ...................... |g:pear_tree_pairs|
+    g:pear_tree_ft_disabled ................ |g:pear_tree_ft_disabled|
+    g:pear_tree_smart_openers .............. |g:pear_tree_smart_openers|
+    g:pear_tree_smart_closers .............. |g:pear_tree_smart_closers|
+    g:pear_tree_smart_backspace ............ |g:pear_tree_smart_backspace|
+    g:pear_tree_timeout .................... |g:pear_tree_timeout|
 
 Mappings:
-
-    <Plug>(PearTreeOpener) ................ |<Plug>(PearTreeOpener)|
-    <Plug>(PearTreeCloser) ................ |<Plug>(PearTreeCloser)|
-    <Plug>(PearTreeBackspace) ............. |<Plug>(PearTreeBackspace)|
-    <Plug>(PearTreeExpand) ................ |<Plug>(PearTreeExpand)|
-    <Plug>(PearTreeFinishExpansion) ....... |<Plug>(PearTreeFinishExpansion)|
-    <Plug>(PearTreeJump) .................. |<Plug>(PearTreeJump)|
-    <Plug>(PearTreeExpandOne) ............. |<Plug>(PearTreeExpandOne)|
-    <Plug>(PearTreeJNR) ................... |<Plug>(PearTreeJNR)|
+    <Plug>(PearTreeOpener) ................. |<Plug>(PearTreeOpener)|
+    <Plug>(PearTreeCloser) ................. |<Plug>(PearTreeCloser)|
+    <Plug>(PearTreeBackspace) .............. |<Plug>(PearTreeBackspace)|
+    <Plug>(PearTreeExpand) ................. |<Plug>(PearTreeExpand)|
+    <Plug>(PearTreeFinishExpansion) ........ |<Plug>(PearTreeFinishExpansion)|
+    <Plug>(PearTreeJump) ................... |<Plug>(PearTreeJump)|
+    <Plug>(PearTreeExpandOne) .............. |<Plug>(PearTreeExpandOne)|
+    <Plug>(PearTreeJNR) .................... |<Plug>(PearTreeJNR)|
 
 ------------------------------------------------------------------------------
                                                            *g:pear_tree_pairs*
                                                            *b:pear_tree_pairs*
-Type: Dictionary
+Type: dictionary ~
+Default: { ~
+    \   '(': {'closer': ')'}, ~
+    \   '[': {'closer': ']'}, ~
+    \   '{': {'closer': '}'}, ~
+    \   "'": {'closer': "'"}, ~
+    \   '"': {'closer': '"'} ~
+    \ } ~
 
-Default: >
-    {
-    \   '(': {'closer': ')'},
-    \   '[': {'closer': ']'},
-    \   '{': {'closer': '}'},
-    \   "'": {'closer': "'"},
-    \   '"': {'closer': '"'}
-    \ }
-<
-Define the opening strings and the closers with which they are to be
-matched. Buffer-local rules take priority over global rules. Define
-`b:pear_tree_pairs` in the appropriate file in your ftplugin folder to
-override the default rules for certain filetypes.
+Define the opening strings and the closers with which they are to be matched.
+Buffer-local rules take priority over global rules. Define `b:pear_tree_pairs`
+in the appropriate file in your ftplugin folder to override the default rules
+for certain filetypes.
 
-Each rule in `g:pear_tree_pairs` has the following form: >
+Each rule in the dictionary has the following form: >
     opener_string: {'closer': closer_string, [options ...]}
 <
-In the rule, `opener_string` is the string that should be typed, and
-`closer_string` is the string to be automatically inserted. Both may be any
-length and may contain a wildcard (see |pear_tree_wildcards|).
+In the rule, {opener_string} is the string that should be typed, and
+{closer_string} is the string to be automatically inserted. Both may be any
+length and may contain a wildcard part (see |pear-tree-wildcards|).
 
 Each rule can also contain options that modify the pairing behavior
-(see |pear_tree_rule_options|).
+(see |pear-tree-rule-options|).
 
-*pear-tree-wildcards*
+Wildcards:                                               *pear-tree-wildcards*
 
 Pear Tree supports wildcard matching in string pairs. Wildcards are specified
-by using an asterisk `*` within the pairs. A wildcard matches user input until
+by using an asterisk (*) within the pairs. A wildcard matches user input until
 the next explicitly defined character in the opener is entered.
 
-A wildcard in the closer is replaced by the string of characters to which
-the wildcard character in the opener was matched. As an example, with
+A wildcard in the closer is replaced by the string of characters to which the
+wildcard character in the opener was matched. As an example, with
 `g:pear_tree_pairs` containing the following rule: >
     '<*>': {'closer': '</*>'}
 <Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, etc.
@@ -84,41 +94,40 @@ To include a literal asterisk in a rule, you must escape it with a backslash
 like `\*`. Similarly, to include a literal backslash in a rule, you must
 escape it with another backslash like `\\`.
 
-*pear-tree-rule-options*
+Rule-Specific Options:                                *pear-tree-rule-options*
 
-A Pear Tree rule includes several options to more finely tune its matching
-behavior:
+A Pear Tree rule may include several options to more finely tune its matching
+behavior.
 
-    `not_in`
+    not_in ~
     Form: `'not_in': [syntax_region, ...]`
-    Function: Do not match the opener you are typing in a syntax region
+    Function: Do not match the opener if the cursor is in a syntax region
               contained in the list (requires syntax to be enabled).
     Example: `'(': {'closer': ')', 'not_in': ['String', 'Comment']}`
 
-    `not_if`
+    not_if ~
     Form: `'not_if': [string, ...]`
     Function: Do not match an opener that contains a wildcard if the value of
               that wildcard is contained in the list.
     Example: `'<*>': {'closer': '</*>', 'not_if': ['br', 'meta']}`
 
-    `until`
+    until ~
     Form: `'until': regexp`
-    Function: Replace the wildcard character in the closer with the
-              wildcard string in the opener only until the regexp pattern is
-              matched. See |match()| for valid patterns.
+    Function: Replace the wildcard character in the closer with the wildcard
+              string in the opener only until the regexp pattern is matched.
+              See |pattern| for valid patterns.
     Example: `'<*>': {'closer': '</*>', 'until': '\W'}`
-             Typing `<p class="Foo">` yields `<p class="Foo"></p>`, and not
-             `<p class="Foo"></p class="Foo">` because the space after `<p`
+             Typing `<p class="foo">` yields `<p class="foo"></p>`, and not
+             `<p class="foo"></p class="foo">` because the space after `<p`
              matches the regexp pattern `'\W'`.
     If not set, the value is `'[[:punct:][:space:]]'` (punctuation or space).
 
 ------------------------------------------------------------------------------
                                                      *g:pear_tree_ft_disabled*
-Type: List
+Type: list ~
+Default: [] ~
 
-Default: `[]`
-
-Define filetypes for which Pear Tree should not be enabled.
+Define filetypes for which Pear Tree should be disabled.
 
 To change the default value, add something like the following to your vimrc:
 >
@@ -127,12 +136,12 @@ To change the default value, add something like the following to your vimrc:
 ------------------------------------------------------------------------------
                                                    *g:pear_tree_smart_openers*
                                                    *b:pear_tree_smart_openers*
-Type: Number
+Type: number ~
+Default: 0 ~
 
-Default: `0`
-
-If the value is not 0, Pear Tree will attempt to maintain pair balance when
-typing a single-character opener instead of always inserting the closer:
+If the value is nonzero, Pear Tree will attempt to maintain pair balance when
+typing an opening string instead of always automatically inserting its closing
+string:
 
                       |   Enabled    |   Disabled   |
         ---------------------------------------------
@@ -151,13 +160,12 @@ To enable, add the following to your vimrc:
 ------------------------------------------------------------------------------
                                                    *g:pear_tree_smart_closers*
                                                    *b:pear_tree_smart_closers*
-Type: Number
+Type: number ~
+Default: 0 ~
 
-Default: `0`
-
-If the value is not 0, Pear Tree will attempt to maintain pair balance when
-typing a single-character closer instead of always moving the cursor past
-the following closer:
+If the value is nonzero, Pear Tree will attempt to maintain pair balance when
+typing a single-character closer instead of always moving the cursor past the
+following closer:
 
                       |   Enabled    |   Disabled   |
         ---------------------------------------------
@@ -176,21 +184,20 @@ To enable, add the following to your vimrc:
 ------------------------------------------------------------------------------
                                                  *g:pear_tree_smart_backspace*
                                                  *b:pear_tree_smart_backspace*
-Type: Number
+Type: number ~
+Default: 0 ~
 
-Default: `0`
-
-If the value is not 0, |<Plug>(PearTreeBackspace)| will attempt to maintain
+If the value is nonzero, |<Plug>(PearTreeBackspace)| will attempt to maintain
 pair balance instead of always deleting empty pairs:
 
         | Backspace # |  Enabled   |  Disabled  |
         -----------------------------------------
-        |      1      |  `(foo()|)`  |  `(foo()|)`  |
-        |      2      |  `(foo(|)`   |  `(foo(|)`   |
-        |      3      |  `(foo|)`    |  `(foo|`     |
+        |      0      |  `(foo()|)`  |  `(foo()|)`  |
+        |      1      |  `(foo(|)`   |  `(foo(|)`   |
+        |      2      |  `(foo|)`    |  `(foo|`     |
 
 If enabled, the first parenthesis remains balanced, while it becomes
-erroneously unbalanced at #3 if disabled.
+erroneously unbalanced at #2 if disabled.
 
 To enable, add the following to your vimrc:
 >
@@ -199,9 +206,8 @@ To enable, add the following to your vimrc:
 ------------------------------------------------------------------------------
                                                          *g:pear_tree_timeout*
                                                          *b:pear_tree_timeout*
-Type: Number
-
-Default: `60`
+Type: number ~
+Default: 60 ~
 
 Set a timeout (in milliseconds) for the balance-checking functions used for
 smart pairs. A lower value will prevent delays when typing in larger files
@@ -213,12 +219,11 @@ This feature requires Vim to be compiled with |+reltime| support.
 
 ------------------------------------------------------------------------------
                                                       *<Plug>(PearTreeOpener)*
-Default: varies
+Default: varies ~
 
-A `<Plug>` mapping is created for each opener in the |b:pear_tree_pairs|
+Pear Tree creates |<Plug>| mappings for every opening string in the pair
 dictionary. The mapping is of the form `<Plug>(PearTreeOpener_x)` where x is
-the final character of the opener string. It is used to trigger auto-pairing
-behavior for the corresponding opener.
+the final character of the opener.
 
 To use a different key mapping to trigger auto-pairing for an opener, add
 something like the following to your vimrc:
@@ -227,12 +232,12 @@ something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                       *<Plug>(PearTreeCloser)*
-Default: varies
+Default: varies ~
 
-A `<Plug>` mapping is created for each single-character closer in the
-|b:pear_tree_pairs| dictionary. Each mapping is of the form
-`<Plug>(PearTreeCloser_x)` where x is the closer character. It is used to
-either insert the closer or move past the closer that follows the cursor.
+Pear Tree creates |<Plug>| mappings for every single-character closer in the
+pair dictionary. Each mapping is of the form `<Plug>(PearTreeCloser_x)` where
+x is the closer character. It is used to either insert the closer or move past
+the closer that follows the cursor.
 
 To use a different key mapping to trigger the Pear Tree functionality for a
 closer, add something like the following to your vimrc:
@@ -241,12 +246,12 @@ closer, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                    *<Plug>(PearTreeBackspace)*
-Default: `<BS>`
+Default: <BS> ~
 
 If the cursor is between an opener and closer, delete both. Otherwise, act
 like a typical backspace.
 
-Usage: `return foo(|)` -> `return foo|`
+Example: `return foo(|)` becomes `return foo|`
 
 To change the default mapping, add something like the following to your vimrc:
 >
@@ -254,19 +259,19 @@ To change the default mapping, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                       *<Plug>(PearTreeExpand)*
-Default: `<CR>`
+Default: <CR> ~
 
-If cursor is between an opener and closer, add a new line and prepare to
-add the closer on the line following the cursor's new position.
+If cursor is between an opener and closer, add a new line and prepare to add
+the closer on the line following the cursor's new position.
 
 In order to not break the |.| command, the closer is temporarily erased. It
 will automatically be added back to the line following the cursor by
 |<Plug>(PearTreeFinishExpansion)|
 
-Usage: >
+Example: >
     1  int foo() {|}
 <
-->
+    becomes
 >
     1  int foo() {
     2      |
@@ -278,17 +283,17 @@ To change the default mapping, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                              *<Plug>(PearTreeFinishExpansion)*
-Default: `<ESC>`
+Default: <ESC> ~
 
 If |<Plug>(PearTreeExpand)| has been used, add the closers to their proper
 positions. After they have been restored, leave insert mode.
 
-Usage: >
+Example: >
     1  int foo() {
     2      |
     3
 <
-->
+    becomes
 >
     1  int foo() {
     2      []
@@ -300,23 +305,23 @@ To change the default mapping, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                    *<Plug>(PearTreeExpandOne)*
-Default: None
+Default: none ~
 
 If |<Plug>(PearTreeExpand)| has been used multiple times, leading to nested
-pairs, add only the innermost closer to its proper position.
+pairs, add only the innermost closing string to its proper position.
 
-Usage: >
+Example: >
     1  <html>
     2      <body>
-    3           <p>Type this and go to the next line.</p>
-    4           |
+    3          <p>Type this and go to the next line.</p>
+    4          |
     5
 <
-->
+    becomes
 >
     1  <html>
     2      <body>
-    3           <p>Type this and go to the next line.</p>
+    3          <p>Type this and go to the next line.</p>
     4      </body>|
     5
 <
@@ -326,17 +331,17 @@ To set the mapping, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                         *<Plug>(PearTreeJump)*
-Default: None
+Default: none ~
 
 If the cursor is before a closer whose opener appears earlier in the text,
 move the cursor past the closer.
 
-Usage: >
-    1  <p class="Foo">Hello, world!|</p>
+Example: >
+    1  <p class="foo">Hello, world!|</p>
 <
-->
+    becomes
 >
-    1  <p class="Foo">Hello, world!</p>|
+    1  <p class="foo">Hello, world!</p>|
 <
 To set the mapping, add something like the following to your vimrc:
 >
@@ -344,23 +349,22 @@ To set the mapping, add something like the following to your vimrc:
 <
 ------------------------------------------------------------------------------
                                                          *<Plug>(PearTreeJNR)*
-Default: None
+Default: none ~
 
 If the cursor is before a closer whose opener appears earlier in the text,
-move the cursor past the closer and insert a newline ("jump 'n return").
+move the cursor past the closer and insert a newline ("jump 'n' return").
 
-Usage: >
-    1  <p class="Foo">Hello, world!|</p>
+Example: >
+    1  <p class="foo">Hello, world!|</p>
 <
-->
+    becomes
 >
-    1  <p class="Foo">Hello, world!</p>
+    1  <p class="foo">Hello, world!</p>
     2  |
 <
 To set the mapping, add something like the following to your vimrc:
 >
-    imap <key> <Plug>(PearTreeExpandOne)
+    imap <key> <Plug>(PearTreeJNR)
 <
-------------------------------------------------------------------------------
-
+==============================================================================
 " vim:tw=78:ts=4:sts=4:sw=4:ft=help:norl:
