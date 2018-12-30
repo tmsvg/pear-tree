@@ -36,6 +36,7 @@ CONFIGURATION                                        *pear-tree-configuration*
 Options:
     g:pear_tree_pairs ...................... |g:pear_tree_pairs|
     g:pear_tree_ft_disabled ................ |g:pear_tree_ft_disabled|
+    g:pear_tree_repeatable_expand .......... |g:pear_tree_repeatable_expand|
     g:pear_tree_smart_openers .............. |g:pear_tree_smart_openers|
     g:pear_tree_smart_closers .............. |g:pear_tree_smart_closers|
     g:pear_tree_smart_backspace ............ |g:pear_tree_smart_backspace|
@@ -132,6 +133,46 @@ Define filetypes for which Pear Tree should be disabled.
 To change the default value, add something like the following to your vimrc:
 >
     let g:pear_tree_ft_disabled = ['c', 'python', 'markdown']
+<
+------------------------------------------------------------------------------
+                                               *g:pear_tree_repeatable_expand*
+                                               *b:pear_tree_repeatable_expand*
+Type: number ~
+Default: 1 ~
+
+If the value is nonzero, expanding pairs will be dot-repeatable. This requires
+the text after the cursor to be erased until |<Plug>(PearTreeFinishExpansion)|
+is triggered.
+
+If this value is 0, the text after the cursor will immediately be moved to the
+next line. This is the typical behavior of other plugins and text editors, but
+limitations of the |.| command lead to unexpected behavior as a result:
+
+Enabled:                            Disabled: ~
+>
+    1  int foo();                       1  int foo();
+    2  int bar();                       2  int bar();
+<
+                Add a return statement to foo
+>
+    1  int foo() {                      1  int foo() {
+    2     return 0;                     2      return 0;
+    3  }                                3  }
+    4  int bar();                       4  int bar();
+<
+                Move to line 4 and press .
+>
+    1  int foo() {                      1  int foo() {
+    2     return 0;                     2      return 0;
+    3  }                                3  }
+    4  int bar() {                      4  return 0;
+    5     return 0;                     5  int bar();
+    6  }
+<
+If preserving dot-repeat in cases like this is not a requirement, you may want
+to add the following to your vimrc:
+>
+    let g:pear_tree_repeatable_expand = 0
 <
 ------------------------------------------------------------------------------
                                                    *g:pear_tree_smart_openers*

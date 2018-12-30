@@ -350,6 +350,8 @@ function! pear_tree#insert_mode#PrepareExpansion() abort
     let l:pair = pear_tree#GetSurroundingPair()
     if l:pair == []
         return "\<CR>"
+    elseif !pear_tree#GetOption('repeatable_expand')
+        return "\<CR>\<C-c>O"
     endif
     let l:opener_pos = l:pair[3]
     let l:cursor_pos = pear_tree#cursor#Position()

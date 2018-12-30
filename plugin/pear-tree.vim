@@ -27,6 +27,10 @@ if !exists('g:pear_tree_ft_disabled')
     let g:pear_tree_ft_disabled = []
 endif
 
+if !exists('g:pear_tree_repeatable_expand')
+    let g:pear_tree_repeatable_expand = 1
+endif
+
 if !exists('g:pear_tree_smart_backspace')
     let g:pear_tree_smart_backspace = 0
 endif
