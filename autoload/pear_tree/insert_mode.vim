@@ -308,7 +308,7 @@ function! s:ShouldDeletePair() abort
         return 1
     endif
 
-    let l:timeout_length = pear_tree#GetOption('smart_timeout')
+    let l:timeout_length = pear_tree#GetOption('timeout')
 
     " Ignore closers that are pending in s:strings_to_expand
     let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
