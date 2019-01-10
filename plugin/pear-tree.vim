@@ -165,7 +165,7 @@ augroup pear_tree
                 \ endif
     autocmd InsertEnter *
                 \ if get(b:, 'pear_tree_enabled', 0) |
-                \     call pear_tree#insert_mode#Prepare() |
+                \     call pear_tree#insert_mode#OnInsertEnter() |
                 \ endif
     autocmd CursorMovedI,InsertEnter *
                 \ if get(b:, 'pear_tree_enabled', 0) |

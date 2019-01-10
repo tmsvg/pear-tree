@@ -17,7 +17,7 @@ else
 endif
 
 
-function! pear_tree#insert_mode#Prepare() abort
+function! pear_tree#insert_mode#OnInsertEnter() abort
     if exists('b:traverser')
         return
     endif
