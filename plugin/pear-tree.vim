@@ -78,7 +78,7 @@ function! s:BufferDisable()
     endfor
     inoremap <silent> <buffer> <Plug>(PearTreeBackspace) <BS>
     inoremap <silent> <buffer> <Plug>(PearTreeExpand) <CR>
-    inoremap <silent> <buffer> <Plug>(PearTreeFinishExpansion) <ESC>
+    inoremap <silent> <buffer> <Plug>(PearTreeFinishExpansion) <Esc>
     inoremap <silent> <buffer> <Plug>(PearTreeExpandOne) <NOP>
     inoremap <silent> <buffer> <Plug>(PearTreeJump) <NOP>
     inoremap <silent> <buffer> <Plug>(PearTreeJNR) <NOP>
@@ -139,11 +139,11 @@ function! s:MapDefaults()
     endif
     if !hasmapto('<Plug>(PearTreeFinishExpansion)', 'i')
         if !has('nvim') && !has('gui_running')
-            " Prevent <ESC> mapping from breaking cursor keys in insert mode
-            imap <buffer> <ESC><ESC> <Plug>(PearTreeFinishExpansion)
-            imap <buffer> <nowait> <ESC> <Plug>(PearTreeFinishExpansion)
+            " Prevent <Esc> mapping from breaking cursor keys in insert mode
+            imap <buffer> <Esc><Esc> <Plug>(PearTreeFinishExpansion)
+            imap <buffer> <nowait> <Esc> <Plug>(PearTreeFinishExpansion)
         else
-            imap <buffer> <ESC> <Plug>(PearTreeFinishExpansion)
+            imap <buffer> <Esc> <Plug>(PearTreeFinishExpansion)
         endif
     endif
 endfunction

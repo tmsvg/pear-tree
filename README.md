@@ -149,7 +149,7 @@ let g:pear_tree_timeout = 60
 " Default mappings:
 imap <BS> <Plug>(PearTreeBackspace)
 imap <CR> <Plug>(PearTreeExpand)
-imap <ESC> <Plug>(PearTreeFinishExpansion)
+imap <Esc> <Plug>(PearTreeFinishExpansion)
 " Pear Tree also makes <Plug> mappings for each opening and closing string.
 "     :help <Plug>(PearTreeOpener)
 "     :help <Plug>(PearTreeCloser)
