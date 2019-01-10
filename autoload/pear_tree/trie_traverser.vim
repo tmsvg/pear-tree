@@ -39,15 +39,17 @@ endfunction
 
 function! s:StepToChild(char) dict abort
     " Try stepping to the node containing a:char.
-    if pear_tree#trie#HasChild(l:self.current, a:char)
-        let l:self.current = pear_tree#trie#GetChild(l:self.current, a:char)
+    let l:node = pear_tree#trie#GetChild(l:self.current, a:char)
+    if l:node != {}
+        let l:self.current = l:node
         let l:self.string = l:self.string . a:char
         return 1
     endif
     " Try stepping to a wildcard node.
     let l:wildcard_symbol = l:self.trie.wildcard_symbol
-    if pear_tree#trie#HasChild(l:self.current, l:wildcard_symbol)
-        let l:self.current = pear_tree#trie#GetChild(l:self.current, l:wildcard_symbol)
+    let l:node = pear_tree#trie#GetChild(l:self.current, l:wildcard_symbol)
+    if l:node != {}
+        let l:self.current = l:node
         let l:self.string = l:self.string . l:wildcard_symbol
         let l:self.wildcard_string = l:self.wildcard_string . a:char
         return 1
@@ -185,6 +187,7 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
     let l:pos = copy(a:start_pos)
     let l:candidate = ''
     let l:candidate_pos = [-1, -1]
+    let l:pairs = pear_tree#Pairs()
     while pear_tree#buffer#ComparePositions(l:pos, a:end_pos) < 0
         let l:line = getline(l:pos[0])
         if l:self.StepToChild(l:line[l:pos[1]])
@@ -205,7 +208,7 @@ function! s:WeakTraverseBuffer(start_pos, end_pos) dict abort
             let l:positions = [a:end_pos]
             let l:str = pear_tree#string#Decode(l:self.string, '*', l:self.trie.wildcard_symbol)
             for l:ch in keys(l:self.current.children)
-                if has_key(pear_tree#Pairs(), l:str . l:ch)
+                if has_key(l:pairs, l:str . l:ch)
                     let l:not_in = pear_tree#GetRule(l:str . l:ch, 'not_in')
                 else
                     let l:not_in = []
