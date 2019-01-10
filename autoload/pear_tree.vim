@@ -181,11 +181,15 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                 endwhile
                 let l:opener_pos = l:end_pos
             else
-                let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint, l:current_pos, l:not_in)
+                let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint,
+                            \                                     l:current_pos,
+                            \                                     l:not_in)
             endif
         endif
         if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) > 0
-            let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer, l:current_pos, l:not_in)
+            let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer,
+                        \                                     l:current_pos,
+                        \                                     l:not_in)
         endif
         if l:closer_pos[0] != -1
                     \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + l:closer_offset], l:opener_pos) >= 0
@@ -223,7 +227,8 @@ endfunction
 " Return the opener and closer that surround the cursor, as well as the
 " wildcard string and the position of the opener.
 function! pear_tree#GetSurroundingPair() abort
-    let l:closers = map(values(pear_tree#Pairs()), 'v:val.closer')
+    let l:pairs = pear_tree#Pairs()
+    let l:closers = map(values(l:pairs), 'v:val.closer')
     let l:closer_trie = pear_tree#trie#New(l:closers)
     let l:closer_traverser = pear_tree#trie_traverser#New(l:closer_trie)
 
@@ -232,9 +237,10 @@ function! pear_tree#GetSurroundingPair() abort
     if l:closer_traverser.WeakTraverseBuffer(l:start, l:end) == [-1, -1]
         return []
     endif
+
     let l:closer = l:closer_traverser.GetString()
     let l:wildcard = l:closer_traverser.GetWildcardString()
-    for l:opener in keys(filter(copy(pear_tree#Pairs()), 'v:val.closer ==# l:closer'))
+    for l:opener in keys(filter(copy(l:pairs), 'v:val.closer ==# l:closer'))
         let l:pos = pear_tree#IsBalancedPair(l:opener, l:wildcard, l:start)
         if l:pos[0] != -1 && pear_tree#buffer#ComparePositions(l:pos, l:start) < 0
             return [l:opener, l:closer, l:wildcard, l:pos]
