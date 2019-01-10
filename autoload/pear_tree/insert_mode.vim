@@ -83,38 +83,50 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
 endfunction
 
 
-" Define situations in which Pear Tree should close a simple opener.
-function! s:ShouldCloseSimpleOpener(char) abort
-    let l:closer = pear_tree#GetRule(a:char, 'closer')
-    let l:next_char = pear_tree#cursor#NextChar()
+function! s:ValidBefore(opener, closer)
     let l:prev_char = pear_tree#cursor#PrevChar()
-    let l:is_dumb = pear_tree#IsDumbPair(a:char)
+    let l:prev_text = pear_tree#cursor#TextBefore()
+    let l:is_dumb = pear_tree#IsDumbPair(a:opener)
 
-    let l:valid_before = !l:is_dumb
-                \ || (l:prev_char !~# '\w'
-                \     && l:prev_char !=# a:char
-                \     && !pear_tree#IsCloser(l:prev_char))
-    let l:valid_after = (l:next_char !~# '\S'
-                \        || l:next_char ==# l:closer)
+    if !l:is_dumb
+        return 1
+    elseif l:prev_text[-strlen(a:opener):] ==# a:opener
+        return 0
+    elseif l:prev_text[:-strlen(a:opener)][-1:] =~# '\w'
+                \ || pear_tree#IsCloser(l:prev_text[:-strlen(a:opener)][-1:])
+        return 0
+    else
+        return 1
+    endif
+endfunction
+
+
+function! s:ValidAfter(opener, closer)
+    let l:next_char = pear_tree#cursor#NextChar()
+    if l:next_char !~# '\S' || pear_tree#IsCloser(l:next_char)
+        return !pear_tree#IsDumbPair(l:next_char)
+                    \ || l:next_char ==# a:opener[-1:]
+    else
+        return 0
+    endif
+endfunction
+
+
+" Determine if Pear Tree should auto-close an opener of length 1.
+function! s:ShouldCloseSimpleOpener(char) abort
+    let l:is_dumb = pear_tree#IsDumbPair(a:char)
+    let l:closer = pear_tree#GetRule(a:char, 'closer')
+
+    let l:valid_before = s:ValidBefore(a:char, l:closer)
+    let l:valid_after = s:ValidAfter(a:char, l:closer)
+
     if !l:valid_before || !l:valid_after
-        if pear_tree#IsDumbPair(l:next_char)
+        let l:pair = pear_tree#GetSurroundingPair()
+        if l:pair == []
             return 0
-        else
-            let l:pair = pear_tree#GetSurroundingPair()
-            if l:pair == []
-                return 0
-            elseif l:is_dumb
-                let [l:opener, l:closer, l:wildcard, l:pair_pos] = l:pair
-                let l:lnum = line('.')
-                let l:col = col('.')
-                let l:line = getline(l:lnum)
-                if [l:lnum, l:col - 2] != l:pair_pos
-                            \ && strridx(l:line, l:closer, l:col) == l:col - 1
-                            \ && l:prev_char =~# '\S'
-                    return 0
-                endif
-            endif
-            return 1
+        elseif l:is_dumb
+            let [l:lnum, l:col] = pear_tree#cursor#Position()
+            return [l:lnum, l:col - 2] == l:pair[3]
         endif
     elseif l:is_dumb || !pear_tree#GetOption('smart_openers')
         return 1
@@ -169,32 +181,33 @@ function! pear_tree#insert_mode#CloseSimpleOpener(char) abort
 endfunction
 
 
-" Define situations in which Pear Tree should close a complex opener.
+" Determine if Pear Tree should auto-close an opener of length > 1.
 function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
-    let l:next_char = pear_tree#cursor#NextChar()
-    let l:prev_char = pear_tree#cursor#PrevChar()
     let l:prev_text = pear_tree#cursor#TextBefore()
+    let l:is_dumb = pear_tree#IsDumbPair(a:opener)
+
     " The wildcard string can span multiple lines, but the opener
     " should not be terminated when the terminating character is the only
     " character on the line.
     if strlen(pear_tree#string#Trim(l:prev_text)) == 0
         return 0
-    elseif pear_tree#IsDumbPair(l:next_char)
-        return 0
     endif
 
-    let l:valid_before = !pear_tree#IsDumbPair(a:opener)
-                \ || (l:prev_text[:-strlen(a:opener)][-1:] !~# '\w'
-                \     && l:prev_text[-strlen(a:opener):] !=# a:opener)
-    let l:valid_after = pear_tree#cursor#AtEndOfLine()
-                \ || l:next_char =~# '\s'
-                \ || has_key(pear_tree#Pairs(), l:next_char)
+    let l:valid_before = s:ValidBefore(a:opener, a:closer)
+    let l:valid_after = s:ValidAfter(a:opener, a:closer)
+
     if !l:valid_before || !l:valid_after
-        if pear_tree#GetSurroundingPair() == []
+        let l:pair = pear_tree#GetSurroundingPair()
+        if l:pair == []
             return 0
+        elseif l:is_dumb
+            let [l:lnum, l:col] = pear_tree#cursor#Position()
+            let l:col = l:col - strlen(a:opener . a:wildcard) - 1
+            if [l:lnum, l:col] != l:pair[3]
+                return 0
+            endif
         endif
-    endif
-    if !pear_tree#GetOption('smart_openers')
+    elseif l:is_dumb || !pear_tree#GetOption('smart_openers')
         return 1
     endif
 
