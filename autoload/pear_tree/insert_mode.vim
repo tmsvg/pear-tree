@@ -429,9 +429,12 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     call s:CorrectTraverser()
     if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
         let l:opener_end = "\<DEL>" . a:char
+        let l:handled_smaller_pair = 1
     elseif has_key(pear_tree#Pairs(), a:char)
-                \ && (b:traverser.AtRoot() || b:traverser.AtWildcard())
+                \ && (b:traverser.AtRoot() || b:traverser.AtWildcard()
+                \     || !pear_tree#trie#HasChild(b:traverser.current, a:char))
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
+        let l:handled_smaller_pair = 1
     else
         let l:opener_end = a:char
     endif
@@ -452,6 +455,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             let l:wildcard = b:traverser.GetWildcardString()
             let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard)
         endif
+        let s:ignore = get(l:, 'handled_smaller_pair', s:ignore)
     else
         let s:ignore = 1
     endif
