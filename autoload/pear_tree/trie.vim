@@ -68,7 +68,7 @@ function! pear_tree#trie#Prefix(trie, node) abort
         let l:string = add(l:string, l:current.char)
         let l:current = l:current.parent
     endwhile
-    let l:string = join(reverse(l:string))
+    let l:string = join(reverse(l:string), '')
     return pear_tree#string#Decode(l:string, '*', a:trie.wildcard_symbol)
 endfunction
 

@@ -150,17 +150,19 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
             let l:pos = copy(l:end_of_wildcard)
             let l:pos[1] = l:pos[1] + 1
         elseif l:self.AtRoot() && l:wildcards != []
+            " Find wildcards that precede {end_pos} in the buffer
             let l:positions = [a:end_pos]
             for l:char in l:wildcards
                 let l:search_pos = pear_tree#buffer#Search(l:char, l:pos, l:not_in)
                 if l:search_pos != [-1, -1]
+                            \ && pear_tree#buffer#ComparePositions(l:search_pos, a:end_pos) < 0
                     call add(l:positions, l:search_pos)
                 else
                     call remove(l:wildcards, l:char)
                 endif
             endfor
             " When no more wildcard strings are found in the buffer, skip to
-            " the end minus the length of the longest string in the trie.
+            " {end_pos} minus the length of the longest string in the trie.
             if l:wildcards == []
                 let l:max_len = max(map(copy(l:strings), 'strlen(v:val)'))
                 let l:pos = copy(a:end_pos)

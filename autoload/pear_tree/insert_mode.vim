@@ -29,7 +29,7 @@ function! pear_tree#insert_mode#OnInsertEnter() abort
 
     let s:strings_to_expand = []
     let s:ignore = 0
-    let s:lost_track = 0
+    let s:lost_track = 1
 endfunction
 
 
@@ -428,21 +428,19 @@ endfunction
 function! pear_tree#insert_mode#TerminateOpener(char) abort
     call s:CorrectTraverser()
     if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
-        let l:opener_end = "\<DEL>" . a:char
-        let l:handled_smaller_pair = 1
+        let l:opener_end = s:RIGHT
     elseif has_key(pear_tree#Pairs(), a:char)
                 \ && (b:traverser.AtRoot() || b:traverser.AtWildcard()
-                \     || !pear_tree#trie#HasChild(b:traverser.current, a:char))
+                \     || !pear_tree#trie#HasChild(b:traverser.GetCurrent(), a:char))
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
-        let l:handled_smaller_pair = 1
     else
         let l:opener_end = a:char
     endif
-    if b:traverser.StepToChild(a:char) && b:traverser.AtEndOfString()
-        let l:string = b:traverser.GetString()
+    let l:node = pear_tree#trie#GetChild(b:traverser.GetCurrent(), a:char)
+    if l:node != {} && l:node.is_end_of_string
+        let l:string = b:traverser.GetString() . a:char
         let l:not_in = pear_tree#GetRule(l:string, 'not_in')
         if l:not_in != [] && pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
-            call b:traverser.StepToParent()
             if b:traverser.AtWildcard()
                 " The terminating character should become part of the wildcard
                 " string if it is entered in a `not_in` syntax region.
@@ -455,9 +453,6 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             let l:wildcard = b:traverser.GetWildcardString()
             let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard)
         endif
-        let s:ignore = get(l:, 'handled_smaller_pair', s:ignore)
-    else
-        let s:ignore = 1
     endif
     return l:opener_end
 endfunction
