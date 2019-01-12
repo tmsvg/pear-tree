@@ -30,13 +30,15 @@ function! pear_tree#insert_mode#OnInsertEnter() abort
     let s:strings_to_expand = []
     let s:ignore = 0
     let s:lost_track = 1
+    
+    let s:traverser_start_pos = [1, 0]
 endfunction
 
 
 function! s:CorrectTraverser() abort
     if s:lost_track
         call b:traverser.Reset()
-        call b:traverser.TraverseBuffer([1, 0], [line('.'), col('.') - 1])
+        let s:traverser_start_pos = b:traverser.TraverseBuffer([1, 0], [line('.'), col('.') - 1])
         let s:lost_track = 0
     elseif pumvisible()
         let l:old_pos = [s:current_line, s:current_column - 1]
@@ -68,10 +70,10 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
         let l:new_pos = [l:new_line, l:new_col - 1]
         if s:lost_track
             call b:traverser.Reset()
-            call b:traverser.TraverseBuffer([1, 0], l:new_pos)
+            let s:traverser_start_pos = b:traverser.TraverseBuffer([1, 0], l:new_pos)
             let s:lost_track = 0
         elseif b:traverser.AtRoot()
-            call b:traverser.TraverseBuffer(l:old_pos, l:new_pos)
+            let s:traverser_start_pos = b:traverser.TraverseBuffer(l:old_pos, l:new_pos)
         else
             call b:traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
             if b:traverser.AtEndOfString()
@@ -424,9 +426,14 @@ function! pear_tree#insert_mode#ExpandOne() abort
 endfunction
 
 
-" Called when pressing the last character in an opener string.
+" Called when pressing the last character in an opening string. The function
+" returns {char} as well as the corresponding closing string if {char}
+" completes an opening string contained in pear_tree_pairs.
 function! pear_tree#insert_mode#TerminateOpener(char) abort
     call s:CorrectTraverser()
+
+    " Handle single-character openers and closers that may be typed within a
+    " wildcard string.
     if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
         let l:opener_end = s:RIGHT
     elseif has_key(pear_tree#Pairs(), a:char)
@@ -435,6 +442,25 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
         let l:opener_end = a:char
+    endif
+
+    " Allow multi-character opening strings to be auto-paired within a
+    " wildcard string. Rescan the buffer starting after the start of the
+    " current wildcard opener and see if {char} terminates another opener.
+    if b:traverser.AtWildcard()
+                \ && !pear_tree#trie#HasChild(b:traverser.GetCurrent(), a:char)
+                \ && filter(keys(pear_tree#Pairs()),
+                \           'strlen(v:val) > 1 && v:val[-1:] ==# a:char') != []
+        let l:save_traverser = deepcopy(b:traverser)
+        let l:start_pos = copy(s:traverser_start_pos)
+        let l:start_pos[1] += 1
+
+        call b:traverser.Reset()
+        let l:end_pos = [s:current_line, s:current_column - 1]
+        call b:traverser.TraverseBuffer(l:start_pos, l:end_pos)
+        if !has_key(pear_tree#Pairs(), b:traverser.GetString() . a:char)
+            let b:traverser = l:save_traverser
+        endif
     endif
     let l:node = pear_tree#trie#GetChild(b:traverser.GetCurrent(), a:char)
     if l:node != {} && l:node.is_end_of_string

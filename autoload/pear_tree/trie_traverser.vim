@@ -121,7 +121,7 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
         endif
     endfor
 
-    let l:pos = l:min_pos
+    let l:pos = copy(l:min_pos)
     let l:not_in = l:min_not_in
 
     let l:wildcards = map(filter(copy(l:strings), 'pear_tree#string#UnescapedStridx(v:val, ''*'') > -1'), 'v:val[0]')
@@ -177,6 +177,7 @@ function! s:TraverseBuffer(start_pos, end_pos) dict abort
             endif
         endif
     endwhile
+    return l:min_pos
 endfunction
 
 
