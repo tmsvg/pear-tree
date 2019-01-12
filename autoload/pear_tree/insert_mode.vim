@@ -86,7 +86,7 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
 endfunction
 
 
-function! s:ValidBefore(opener, closer)
+function! s:ValidBefore(opener, closer) abort
     let l:prev_char = pear_tree#cursor#PrevChar()
     let l:prev_text = pear_tree#cursor#TextBefore()
     let l:is_dumb = pear_tree#IsDumbPair(a:opener)
@@ -104,7 +104,7 @@ function! s:ValidBefore(opener, closer)
 endfunction
 
 
-function! s:ValidAfter(opener, closer)
+function! s:ValidAfter(opener, closer) abort
     let l:next_char = pear_tree#cursor#NextChar()
     if l:next_char !~# '\S' || pear_tree#IsCloser(l:next_char)
         return !pear_tree#IsDumbPair(l:next_char)
@@ -480,6 +480,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard)
         endif
     endif
+    let b:traverser = get(l:, 'save_traverser', b:traverser)
     return l:opener_end
 endfunction
 
