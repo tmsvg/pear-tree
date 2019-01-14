@@ -21,6 +21,22 @@ else
 endif
 
 
+" Return the number of times {substring} occurs in {string}.
+if v:version > 800 || (v:version == 800 && has('patch794'))
+    function! pear_tree#string#Count(string, substring) abort
+        return count(a:string, a:substring)
+    endfunction
+else
+    function! pear_tree#string#Count(string, substring) abort
+        let l:substr_len = strlen(a:substring)
+        if l:substr_len == 0
+            return 0
+        endif
+        return (strlen(a:string) - strlen(substitute(a:string, a:substring, '', 'g'))) / l:substr_len
+    endfunction
+endif
+
+
 " Return {string} with all occurrences of {special_char} escaped and all
 " occurrences of {replacement} replaced with unescaped {special_char}.
 function! pear_tree#string#Decode(string, special_char, replacement) abort

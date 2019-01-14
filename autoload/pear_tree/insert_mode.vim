@@ -139,8 +139,8 @@ function! s:ShouldCloseSimpleOpener(char) abort
 
     " Ignore closers that are pending in s:strings_to_expand
     let l:strings_to_expand = join(s:strings_to_expand, '')
-    let l:ignore = count(l:strings_to_expand, l:closer)
-    let l:ignore = l:ignore - count(l:strings_to_expand, a:char)
+    let l:ignore = pear_tree#string#Count(l:strings_to_expand, l:closer)
+    let l:ignore = l:ignore - pear_tree#string#Count(l:strings_to_expand, a:char)
 
     let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer,
                 \                             [line('.'), col('.') - 1],
@@ -232,7 +232,7 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
                     \                             l:timeout_length)
     endif
     " Ignore closers that are pending in s:strings_to_expand
-    let l:ignore = count(join(s:strings_to_expand, ''), a:closer)
+    let l:ignore = pear_tree#string#Count(join(s:strings_to_expand, ''), a:closer)
     if l:closer_pos == [-1, -1] && l:ignore > 0
         let l:closer_pos = l:cursor_pos
     endif
@@ -274,8 +274,8 @@ function! s:ShouldSkipCloser(char) abort
     for l:opener in keys(filter(l:pairs, 'v:val.closer ==# a:char'))
         " Ignore closers that are pending in s:strings_to_expand
         let l:strings_to_expand = join(s:strings_to_expand, '')
-        let l:ignore = count(l:strings_to_expand, a:char)
-                    \  - count(l:strings_to_expand, l:opener)
+        let l:ignore = pear_tree#string#Count(l:strings_to_expand, a:char)
+                    \  - pear_tree#string#Count(l:strings_to_expand, l:opener)
 
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char,
                     \                             [line('.'), col('.') - 1],
@@ -332,7 +332,8 @@ function! s:ShouldDeletePair() abort
     let l:timeout_length = pear_tree#GetOption('timeout')
 
     " Ignore closers that are pending in s:strings_to_expand
-    let l:ignore = count(join(s:strings_to_expand, ''), l:next_char) + 1
+    let l:strings_to_expand = join(s:strings_to_expand, '')
+    let l:ignore = pear_tree#string#Count(l:strings_to_expand, l:next_char) + 1
 
     let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char,
                 \                             [line('.'), col('.') - 1],
