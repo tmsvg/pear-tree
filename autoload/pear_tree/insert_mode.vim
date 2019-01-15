@@ -465,7 +465,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     endif
     let l:node = pear_tree#trie#GetChild(b:traverser.GetCurrent(), a:char)
     if l:node != {} && l:node.is_end_of_string
-        let l:string = b:traverser.GetString() . a:char
+        let l:string = b:traverser.GetString() . escape(a:char, '*')
         let l:not_in = pear_tree#GetRule(l:string, 'not_in')
         if l:not_in != [] && pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
             if b:traverser.AtWildcard()
