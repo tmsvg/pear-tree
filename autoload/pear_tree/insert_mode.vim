@@ -30,7 +30,7 @@ function! pear_tree#insert_mode#OnInsertEnter() abort
     let s:strings_to_expand = []
     let s:ignore = 0
     let s:lost_track = 1
-    
+
     let s:traverser_start_pos = [1, 0]
 endfunction
 
@@ -91,7 +91,14 @@ function! s:ValidBefore(opener, closer) abort
     let l:prev_text = pear_tree#cursor#TextBefore()
     let l:is_dumb = pear_tree#IsDumbPair(a:opener)
 
-    if !l:is_dumb
+    " Don't close `"` in VimL if the cursor is on an empty line or preceded
+    " by multiple spaces or a tab character.
+    if &filetype ==? 'vim' && a:opener ==# '"'
+                \ && (pear_tree#string#Trim(l:prev_text) ==# ''
+                \     || l:prev_char =~# '\t'
+                \     || l:prev_text[-2:] =~# '\s\{2}')
+        return 0
+    elseif !l:is_dumb
         return 1
     elseif l:prev_text[-strlen(a:opener):] ==# a:opener
         return 0
