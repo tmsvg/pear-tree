@@ -73,8 +73,16 @@ function! s:BufferDisable()
     endif
     let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
     for [l:opener, l:closer] in map(items(l:pairs), '[v:val[0][-1:], v:val[1].closer]')
-        execute 'inoremap <silent> <buffer> <Plug>(PearTreeOpener_' . l:opener . ') ' . l:opener
-        execute 'inoremap <silent> <buffer> <Plug>(PearTreeCloser_' . l:closer . ') ' . l:closer
+        if l:opener ==# '|'
+            let l:opener = '<Bar>'
+        endif
+        let l:opener_plug = '<Plug>(PearTreeOpener_' . l:opener . ')'
+        let l:closer_plug = '<Plug>(PearTreeCloser_' . l:closer . ')'
+
+        execute 'inoremap <silent> <buffer> ' . l:opener_plug . ' ' . l:opener
+        if mapcheck(l:closer_plug, 'i') !=# ''
+            execute 'inoremap <silent> <buffer> ' . l:closer_plug . ' ' . l:closer
+        endif
     endfor
     inoremap <silent> <buffer> <Plug>(PearTreeBackspace) <BS>
     inoremap <silent> <buffer> <Plug>(PearTreeExpand) <CR>
@@ -89,7 +97,14 @@ endfunction
 function! s:CreatePlugMappings()
     let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
     for [l:opener, l:closer] in map(items(l:pairs), '[v:val[0][-1:], v:val[1].closer]')
-        let l:escaped_opener = substitute(l:opener, "'", "''", 'g')
+        if l:opener ==# "'"
+            let l:escaped_opener = "''"
+        elseif l:opener ==# '|'
+            let l:opener = '<Bar>'
+            let l:escaped_opener = '<Bar>'
+        else
+            let l:escaped_opener = l:opener
+        endif
         execute 'inoremap <silent> <expr> <buffer> '
                     \ . '<Plug>(PearTreeOpener_' . l:opener . ') '
                     \ . 'pear_tree#insert_mode#TerminateOpener('''
@@ -121,6 +136,9 @@ function! s:MapDefaults()
         endif
     endfor
     for l:opener in map(keys(l:pairs), 'v:val[-1:]')
+        if l:opener ==# '|'
+            let l:opener = '<Bar>'
+        endif
         let l:opener_plug = '<Plug>(PearTreeOpener_' . l:opener . ')'
         if !hasmapto(l:opener_plug, 'i')
             execute 'imap <buffer> ' . l:opener . ' ' l:opener_plug
