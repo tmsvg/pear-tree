@@ -243,11 +243,13 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
     if l:closer_pos == [-1, -1] && l:ignore > 0
         let l:closer_pos = l:cursor_pos
     endif
-    " An {opener} may be complete in the buffer if a smaller pair surrounds
-    " it (e.g. <: > and <*>: </*>), even if the user has not finished
-    " typing it. When skipping a closer such as `>`, s:ignore should be 1.
-    " Use it to ignore the {opener} being typed when checking pair balance.
-    let l:ignore = l:ignore + s:ignore
+    " An {opener} may be complete in the buffer if a smaller pair surrounds it
+    " (e.g. <: > and <*>: </*>), even if the user has not finished typing it.
+    " We should ignore the {opener} being typed when checking pair balance.
+    let l:next_char = pear_tree#cursor#NextChar()
+    if l:next_char ==# a:opener[-1:] && pear_tree#IsCloser(l:next_char)
+        let l:ignore = l:ignore + 1
+    endif
     return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
                 \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard,
                 \                             l:closer_pos, l:ignore,
