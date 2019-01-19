@@ -82,9 +82,9 @@ wildcard character in the opener was matched. As an example, with
     '<*>': {'closer': '</*>'}
 <Typing `<html>` yields `<html></html>`, `<ul>` yields `<ul></ul>`, etc.
 
-To include a literal asterisk in a rule, you must escape it with a backslash
-like `\*`. Similarly, to include a literal backslash in a rule, you must
-escape it with another backslash like `\\`.
+Note: To include a literal asterisk in a rule, you must escape it with a
+backslash like `\*`. Similarly, to include a literal backslash in a rule, you
+must escape it with another backslash like `\\`.
 
 Rule-Specific Options:                                *pear-tree-rule-options*
 

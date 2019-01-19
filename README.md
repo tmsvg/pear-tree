@@ -29,7 +29,8 @@ Features
 
 Pear Tree is not limited to pairing single characters like `(` with `)`, `{`
 with `}`, and so on. If you would like to pair, say, `/*` with `*/` or `<!--`
-with `-->`, it works just as well.
+with `-->`, simply add them to your `g:pear_tree_pairs` and it will work just
+as well.
 
 ### Wildcard Support
 
@@ -95,6 +96,10 @@ Finally, move to line 5 and use the `.` command:
 Many implementations of this feature cause the `.` command to only repeat
 `return 1;` instead of the entire typing sequence.
 
+However, if you would prefer expansion to behave like other plugins and text
+editors, you can prevent Pear Tree from erasing the closing string by setting
+`g:pear_tree_repeatable_expand` to `0`.
+
 ### Smart Pairing
 
 Pear Tree includes options to intelligently decide when an opening string
@@ -115,9 +120,10 @@ Smart pairs must be [enabled manually](#defaults).
 
 Usage
 -----
-Pear Tree's primary features are enabled automatically, but some useful
-options and mappings must be set manually. Please read `:help pear-tree` for
-information on using and configuring Pear Tree.
+Pear Tree's primary features are enabled automatically, but some useful options
+and mappings must be set manually. Please read `:help pear-tree` for useful
+information on how to define your own pairs, use wildcards, customize mappings,
+and more.
 
 ### Defaults
 
@@ -132,18 +138,18 @@ let g:pear_tree_pairs = {
             \ }
 " See pear-tree/ftplugin/ for filetype-specific matching rules
 
-" Pear Tree is enabled for all filetypes by default
+" Pear Tree is enabled for all filetypes by default:
 let g:pear_tree_ft_disabled = []
 
-" Pair expansion is dot-repeatable by default
+" Pair expansion is dot-repeatable by default:
 let g:pear_tree_repeatable_expand = 1
 
-" Smart pairs are disabled by default
+" Smart pairs are disabled by default:
 let g:pear_tree_smart_openers = 0
 let g:pear_tree_smart_closers = 0
 let g:pear_tree_smart_backspace = 0
 
-" If enabled, smart pair functions timeout after 60ms
+" If enabled, smart pair functions timeout after 60ms:
 let g:pear_tree_timeout = 60
 
 " Default mappings:
