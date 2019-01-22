@@ -173,7 +173,6 @@ command -bar PearTreeDisable call s:BufferDisable()
 augroup pear_tree
     autocmd!
     autocmd FileType *
-                \ call <SID>BufferEnable() |
                 \ if index(g:pear_tree_ft_disabled, &filetype) > -1 |
                 \     call <SID>BufferDisable() |
                 \ endif
