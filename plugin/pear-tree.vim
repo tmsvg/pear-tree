@@ -176,7 +176,7 @@ augroup pear_tree
                 \ if index(g:pear_tree_ft_disabled, &filetype) > -1 |
                 \     call <SID>BufferDisable() |
                 \ endif
-    autocmd BufRead,BufNewFile,BufEnter *
+    autocmd BufRead,BufNewFile,BufEnter,CmdWinEnter *
                 \ if !exists('b:pear_tree_enabled') && index(g:pear_tree_ft_disabled, &filetype) == -1 |
                 \     call <SID>BufferEnable() |
                 \ endif
