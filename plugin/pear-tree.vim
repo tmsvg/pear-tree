@@ -128,6 +128,14 @@ endfunction
 
 
 function! s:MapDefaults()
+    let l:restore_keymap = ''
+    if has('keymap')
+        let l:restore_keymap .= 'set keymap=' . &keymap
+        let l:restore_keymap .= ' | set iminsert=' . &iminsert
+        let l:restore_keymap .= ' | set imsearch=' . &imsearch
+        set keymap=
+    endif
+
     let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
     for l:closer in map(values(l:pairs), 'v:val.closer')
         let l:closer_plug = '<Plug>(PearTreeCloser_' . l:closer . ')'
@@ -144,6 +152,8 @@ function! s:MapDefaults()
             execute 'imap <buffer> ' . l:opener . ' ' l:opener_plug
         endif
     endfor
+
+    execute l:restore_keymap
 
     " Stop here if special keys aren't mappable.
     if stridx(&cpoptions, '<') > -1
