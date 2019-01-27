@@ -134,6 +134,8 @@ function! s:ShouldCloseSimpleOpener(char) abort
         let l:pair = pear_tree#GetSurroundingPair()
         if l:pair == []
             return 0
+        elseif l:pair[0] ==# l:pair[1]
+            return 0
         elseif l:is_dumb
             let [l:lnum, l:col] = pear_tree#cursor#Position()
             return [l:lnum, l:col - 2] == l:pair[3]
