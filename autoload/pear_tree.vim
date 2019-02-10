@@ -12,6 +12,7 @@ let s:pear_tree_default_rules = {
             \ 'closer': '',
             \ 'not_in': [],
             \ 'not_if': [],
+            \ 'not_like': '',
             \ 'until': '[[:punct:][:space:]]'
             \ }
 
@@ -95,6 +96,10 @@ function! pear_tree#GenerateCloser(opener, wildcard, position) abort
         return ''
     endif
     if index(pear_tree#GetRule(a:opener, 'not_if'), l:trimmed_wildcard) > -1
+        return ''
+    endif
+    let l:not_like = pear_tree#GetRule(a:opener, 'not_like')
+    if l:not_like !=# '' && match(a:wildcard, l:not_like) > -1
         return ''
     endif
     " Replace unescaped * chars with the wildcard string.

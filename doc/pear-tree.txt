@@ -103,6 +103,15 @@ behavior.
               that wildcard is contained in the list.
     Example: `'<*>': {'closer': '</*>', 'not_if': ['br', 'meta']}`
 
+    not_like ~
+    Form: `'not_like': regexp`
+    Function: Do not match an opener that contains a wildcard if the value of
+              that wildcard matches the regexp pattern. See |pattern| for
+              valid patterns.
+    Example: `'<*>': {'closer': '</*>', 'not_like': '/$'}`
+             Typing `<img />` does not yield `<img /></img>` because the `/`
+             in the opener matches the regexp pattern `'/$'`.
+
     until ~
     Form: `'until': regexp`
     Function: Replace the wildcard character in the closer with the wildcard
