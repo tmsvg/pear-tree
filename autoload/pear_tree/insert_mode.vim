@@ -111,9 +111,16 @@ function! s:ValidBefore(opener, closer) abort
 endfunction
 
 
-function! s:ValidAfter(opener, closer) abort
+function! s:ValidAfter(opener, closer, ...) abort
+    let l:traverser = a:0 ? a:1 : b:traverser
     let l:next_char = pear_tree#cursor#NextChar()
-    if l:next_char !~# '\S' || pear_tree#IsCloser(l:next_char)
+    let l:node = pear_tree#trie#GetChild(l:traverser.GetCurrent(), l:next_char)
+    " A character after the cursor is allowed if it ends a wildcard opener.
+    if l:node != {} && l:node.is_end_of_string
+                \ && l:traverser.AtWildcard()
+                \ && a:opener[-1:] != l:next_char
+        return 1
+    elseif l:next_char !~# '\S' || pear_tree#IsCloser(l:next_char)
         return !pear_tree#IsDumbPair(l:next_char)
                     \ || l:next_char ==# a:opener[-1:]
     else
@@ -196,7 +203,7 @@ endfunction
 
 
 " Determine if Pear Tree should auto-close an opener of length > 1.
-function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
+function! s:ShouldCloseComplexOpener(opener, closer, wildcard, traverser) abort
     let l:prev_text = pear_tree#cursor#TextBefore()
     let l:is_dumb = pear_tree#IsDumbPair(a:opener)
 
@@ -208,7 +215,7 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
     endif
 
     let l:valid_before = s:ValidBefore(a:opener, a:closer)
-    let l:valid_after = s:ValidAfter(a:opener, a:closer)
+    let l:valid_after = s:ValidAfter(a:opener, a:closer, a:traverser)
 
     if !l:valid_before || !l:valid_after
         let l:pair = pear_tree#GetSurroundingPair()
@@ -259,7 +266,8 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard) abort
 endfunction
 
 
-function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard) abort
+function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard, ...) abort
+    let l:traverser = a:0 ? a:1 : b:traverser
     let l:pos = pear_tree#cursor#Position()
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, l:pos)
     let l:end_char = l:closer[-1:]
@@ -268,7 +276,7 @@ function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard) abort
                 \ && pear_tree#insert_mode#HandleCloser(l:end_char) !=# l:end_char
         let l:closer = l:closer[:(strlen(l:closer) - 2)]
     endif
-    if s:ShouldCloseComplexOpener(a:opener, l:closer, a:wildcard)
+    if s:ShouldCloseComplexOpener(a:opener, l:closer, a:wildcard, l:traverser)
         return l:closer . repeat(s:LEFT,
                     \            pear_tree#string#VisualLength(l:closer))
     else
@@ -495,7 +503,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
             endif
         elseif strlen(l:string) > 1
             let l:wildcard = b:traverser.GetWildcardString()
-            let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard)
+            let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard, get(l:, 'save_traverser', b:traverser))
         endif
     endif
     let b:traverser = get(l:, 'save_traverser', b:traverser)
