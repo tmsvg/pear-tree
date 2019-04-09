@@ -136,7 +136,7 @@ let g:pear_tree_pairs = {
             \ "'": {'closer': "'"},
             \ '"': {'closer': '"'}
             \ }
-" See pear-tree/ftplugin/ for filetype-specific matching rules
+" See pear-tree/after/ftplugin/ for filetype-specific matching rules
 
 " Pear Tree is enabled for all filetypes by default:
 let g:pear_tree_ft_disabled = []
