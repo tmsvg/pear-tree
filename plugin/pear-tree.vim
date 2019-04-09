@@ -94,6 +94,13 @@ function! s:BufferDisable()
 endfunction
 
 
+function! s:BufferUnload()
+    call s:BufferDisable()
+    call pear_tree#insert_mode#Unload()
+    unlet! b:pear_tree_enabled
+endfunction
+
+
 function! s:CreatePlugMappings()
     let l:pairs = get(b:, 'pear_tree_pairs', get(g:, 'pear_tree_pairs'))
     for [l:opener, l:closer] in map(items(l:pairs), '[v:val[0][-1:], v:val[1].closer]')
@@ -183,18 +190,21 @@ command -bar PearTreeDisable call s:BufferDisable()
 augroup pear_tree
     autocmd!
     autocmd FileType *
+                \ if exists('b:pear_tree_enabled') |
+                \     call <SID>BufferUnload() |
+                \ endif |
                 \ if index(g:pear_tree_ft_disabled, &filetype) > -1 |
                 \     call <SID>BufferDisable() |
                 \ endif
-    autocmd BufRead,BufNewFile,BufEnter,CmdWinEnter *
+    autocmd InsertEnter *
                 \ if !exists('b:pear_tree_enabled') && index(g:pear_tree_ft_disabled, &filetype) == -1 |
                 \     call <SID>BufferEnable() |
-                \ endif
-    autocmd InsertEnter *
+                \ endif |
                 \ if get(b:, 'pear_tree_enabled', 0) |
                 \     call pear_tree#insert_mode#OnInsertEnter() |
+                \     call pear_tree#insert_mode#OnCursorMovedI() |
                 \ endif
-    autocmd CursorMovedI,InsertEnter *
+    autocmd CursorMovedI *
                 \ if get(b:, 'pear_tree_enabled', 0) |
                 \     call pear_tree#insert_mode#OnCursorMovedI() |
                 \ endif

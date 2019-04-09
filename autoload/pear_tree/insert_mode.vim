@@ -35,6 +35,11 @@ function! pear_tree#insert_mode#OnInsertEnter() abort
 endfunction
 
 
+function! pear_tree#insert_mode#Unload() abort
+    unlet! b:traverser
+endfunction
+
+
 function! s:CorrectTraverser() abort
     if s:lost_track
         call b:traverser.Reset()

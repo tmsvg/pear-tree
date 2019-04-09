@@ -4,12 +4,14 @@
 " License: MIT
 " Website: https://github.com/tmsvg/pear-tree
 
-if exists('b:did_ftplugin') || exists('b:pear_tree_pairs')
-    finish
-endif
-
 let s:save_cpo = &cpoptions
 set cpoptions&vim
+
+if exists('b:undo_ftplugin')
+    let b:undo_ftplugin .= ' | unlet! b:pear_tree_pairs'
+else
+    let b:undo_ftplugin = 'unlet! b:pear_tree_pairs'
+endif
 
 let b:pear_tree_pairs = extend(deepcopy(g:pear_tree_pairs), {
             \ '`': {'closer': '`'},
