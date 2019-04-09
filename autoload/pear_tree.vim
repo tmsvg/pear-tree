@@ -311,7 +311,7 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start, ...) a
     endif
 
     let l:not_in = pear_tree#GetRule(a:opener, 'not_in')
-    let l:traverser = deepcopy(b:traverser)
+    let l:traverser = deepcopy(b:pear_tree_traverser)
     let l:idx = pear_tree#string#UnescapedStridx(a:opener, '*')
     let l:opener_hint = pear_tree#string#Encode(a:opener[:(l:idx)], '*', a:wildcard)
 

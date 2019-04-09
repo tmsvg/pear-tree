@@ -18,11 +18,11 @@ endif
 
 
 function! pear_tree#insert_mode#OnInsertEnter() abort
-    if exists('b:traverser')
+    if exists('b:pear_tree_traverser')
         return
     endif
     let l:trie = pear_tree#trie#New(keys(pear_tree#Pairs()))
-    let b:traverser = pear_tree#trie_traverser#New(l:trie)
+    let b:pear_tree_traverser = pear_tree#trie_traverser#New(l:trie)
 
     let s:current_line = line('.')
     let s:current_column = col('.')
@@ -36,20 +36,20 @@ endfunction
 
 
 function! pear_tree#insert_mode#Unload() abort
-    unlet! b:traverser
+    unlet! b:pear_tree_traverser
 endfunction
 
 
 function! s:CorrectTraverser() abort
     if s:lost_track
-        call b:traverser.Reset()
-        let s:traverser_start_pos = b:traverser.TraverseBuffer([1, 0], [line('.'), col('.') - 1])
+        call b:pear_tree_traverser.Reset()
+        let s:traverser_start_pos = b:pear_tree_traverser.TraverseBuffer([1, 0], [line('.'), col('.') - 1])
         let s:lost_track = 0
     elseif pumvisible()
         let l:old_pos = [s:current_line, s:current_column - 1]
         let l:new_pos = [line('.'), col('.') - 1]
         " Characters inserted by autocomplete are not caught by InsertCharPre.
-        call b:traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
+        call b:pear_tree_traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
     endif
 endfunction
 
@@ -58,7 +58,7 @@ function! pear_tree#insert_mode#OnInsertCharPre() abort
     call s:CorrectTraverser()
     let s:current_column = col('.') + 1
     if !s:ignore
-        call b:traverser.StepOrReset(v:char)
+        call b:pear_tree_traverser.StepOrReset(v:char)
     else
         let s:ignore = 0
     endif
@@ -74,15 +74,15 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
         let l:old_pos = [s:current_line, s:current_column - 1]
         let l:new_pos = [l:new_line, l:new_col - 1]
         if s:lost_track
-            call b:traverser.Reset()
-            let s:traverser_start_pos = b:traverser.TraverseBuffer([1, 0], l:new_pos)
+            call b:pear_tree_traverser.Reset()
+            let s:traverser_start_pos = b:pear_tree_traverser.TraverseBuffer([1, 0], l:new_pos)
             let s:lost_track = 0
-        elseif b:traverser.AtRoot()
-            let s:traverser_start_pos = b:traverser.TraverseBuffer(l:old_pos, l:new_pos)
+        elseif b:pear_tree_traverser.AtRoot()
+            let s:traverser_start_pos = b:pear_tree_traverser.TraverseBuffer(l:old_pos, l:new_pos)
         else
-            call b:traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
-            if b:traverser.AtEndOfString()
-                call b:traverser.Reset()
+            call b:pear_tree_traverser.WeakTraverseBuffer(l:old_pos, l:new_pos)
+            if b:pear_tree_traverser.AtEndOfString()
+                call b:pear_tree_traverser.Reset()
             endif
         endif
     endif
@@ -117,7 +117,7 @@ endfunction
 
 
 function! s:ValidAfter(opener, closer, ...) abort
-    let l:traverser = a:0 ? a:1 : b:traverser
+    let l:traverser = a:0 ? a:1 : b:pear_tree_traverser
     let l:next_char = pear_tree#cursor#NextChar()
     let l:node = pear_tree#trie#GetChild(l:traverser.GetCurrent(), l:next_char)
     " A character after the cursor is allowed if it ends a wildcard opener.
@@ -272,7 +272,7 @@ endfunction
 
 
 function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard, ...) abort
-    let l:traverser = a:0 ? a:1 : b:traverser
+    let l:traverser = a:0 ? a:1 : b:pear_tree_traverser
     let l:pos = pear_tree#cursor#Position()
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, l:pos)
     let l:end_char = l:closer[-1:]
@@ -468,8 +468,8 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     if pear_tree#IsCloser(a:char) && pear_tree#cursor#NextChar() ==# a:char
         let l:opener_end = s:RIGHT
     elseif has_key(pear_tree#Pairs(), a:char)
-                \ && (b:traverser.AtRoot() || b:traverser.AtWildcard()
-                \     || !pear_tree#trie#HasChild(b:traverser.GetCurrent(), a:char))
+                \ && (b:pear_tree_traverser.AtRoot() || b:pear_tree_traverser.AtWildcard()
+                \     || !pear_tree#trie#HasChild(b:pear_tree_traverser.GetCurrent(), a:char))
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
         let l:opener_end = a:char
@@ -478,40 +478,40 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     " Allow multi-character opening strings to be auto-paired within a
     " wildcard string. Rescan the buffer starting after the start of the
     " current wildcard opener and see if {char} terminates another opener.
-    if b:traverser.AtWildcard()
-                \ && !pear_tree#trie#HasChild(b:traverser.GetCurrent(), a:char)
+    if b:pear_tree_traverser.AtWildcard()
+                \ && !pear_tree#trie#HasChild(b:pear_tree_traverser.GetCurrent(), a:char)
                 \ && filter(keys(pear_tree#Pairs()),
                 \           'strlen(v:val) > 1 && v:val[-1:] ==# a:char') != []
-        let l:save_traverser = deepcopy(b:traverser)
+        let l:save_traverser = deepcopy(b:pear_tree_traverser)
         let l:start_pos = copy(s:traverser_start_pos)
         let l:start_pos[1] += 1
 
-        call b:traverser.Reset()
+        call b:pear_tree_traverser.Reset()
         let l:end_pos = [s:current_line, s:current_column - 1]
-        call b:traverser.TraverseBuffer(l:start_pos, l:end_pos)
-        if !has_key(pear_tree#Pairs(), b:traverser.GetString() . a:char)
-            let b:traverser = l:save_traverser
+        call b:pear_tree_traverser.TraverseBuffer(l:start_pos, l:end_pos)
+        if !has_key(pear_tree#Pairs(), b:pear_tree_traverser.GetString() . a:char)
+            let b:pear_tree_traverser = l:save_traverser
         endif
     endif
-    let l:node = pear_tree#trie#GetChild(b:traverser.GetCurrent(), a:char)
+    let l:node = pear_tree#trie#GetChild(b:pear_tree_traverser.GetCurrent(), a:char)
     if l:node != {} && l:node.is_end_of_string
-        let l:string = b:traverser.GetString() . escape(a:char, '*')
+        let l:string = b:pear_tree_traverser.GetString() . escape(a:char, '*')
         let l:not_in = pear_tree#GetRule(l:string, 'not_in')
         if l:not_in != [] && pear_tree#cursor#SyntaxRegion() =~? join(l:not_in, '\|')
-            if b:traverser.AtWildcard()
+            if b:pear_tree_traverser.AtWildcard()
                 " The terminating character should become part of the wildcard
                 " string if it is entered in a `not_in` syntax region.
                 let s:ignore = 1
-                let b:traverser.wildcard_string .= a:char
+                let b:pear_tree_traverser.wildcard_string .= a:char
             else
-                call b:traverser.Reset()
+                call b:pear_tree_traverser.Reset()
             endif
         elseif strlen(l:string) > 1
-            let l:wildcard = b:traverser.GetWildcardString()
-            let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard, get(l:, 'save_traverser', b:traverser))
+            let l:wildcard = b:pear_tree_traverser.GetWildcardString()
+            let l:opener_end .= pear_tree#insert_mode#CloseComplexOpener(l:string, l:wildcard, get(l:, 'save_traverser', b:pear_tree_traverser))
         endif
     endif
-    let b:traverser = get(l:, 'save_traverser', b:traverser)
+    let b:pear_tree_traverser = get(l:, 'save_traverser', b:pear_tree_traverser)
     return l:opener_end
 endfunction
 
