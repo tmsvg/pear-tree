@@ -14,27 +14,39 @@ function! s:ShouldSkip(position, skip_list) abort
 endfunction
 
 
-" Search through the buffer for {string} beginning at {start_position}.
-function! pear_tree#buffer#Search(string, start_position, ...) abort
+" Search through the buffer for {string} beginning at {start_pos} and return
+" its position, or [-1, -1] if it does not occur in the buffer.
+"
+" An optional argument {skip_regions} will cause the function to reject
+" occurrences of {string} that are within a syntax region included in the
+" list.
+"
+" An optional argument {end_pos} will cause the function to stop searching
+" if it passes that point in the buffer.
+function! pear_tree#buffer#Search(string, start_pos, ...) abort
     let l:skip_regions = a:0 ? a:1 : []
-    let l:lnum = a:start_position[0]
+    let l:end = a:0 >= 2 ? a:2 : pear_tree#buffer#End()
+    let l:lnum = a:start_pos[0]
     let l:line = getline(l:lnum)
-    let l:col = stridx(l:line, a:string, a:start_position[1])
-    let l:end = line('$')
-    while l:lnum <= l:end && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
+    let l:col = stridx(l:line, a:string, a:start_pos[1])
+    while l:lnum <= l:end[0] && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
         if l:col == -1
             let l:lnum = l:lnum + 1
             let l:line = getline(l:lnum)
         endif
         let l:col = stridx(l:line, a:string, l:col + 1)
     endwhile
-    return l:col == -1 ? [-1, -1] : [l:lnum, l:col]
+    return l:col == -1 || pear_tree#buffer#ComparePositions([l:lnum, l:col], l:end) > 0 ? [-1, -1] : [l:lnum, l:col]
 endfunction
 
 
-" Search backwards through the buffer for {string} beginning at
-" {start_position}.
-function! pear_tree#buffer#ReverseSearch(string, start_position, ...) abort
+" Search backwards through the buffer for {string} beginning at {start_pos}
+" and return its position, or [-1, -1] if it does not occur in the buffer.
+"
+" An optional argument {skip_regions} will cause the function to reject
+" occurrences of {string} that are within a syntax region included in the
+" list.
+function! pear_tree#buffer#ReverseSearch(string, start_pos, ...) abort
     let l:skip_regions = a:0 ? a:1 : []
     let l:lnum = a:start_position[0]
     let l:line = getline(l:lnum)
