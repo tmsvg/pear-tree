@@ -80,7 +80,10 @@ endfunction
 " already at the end of the trie, reset the traverser.
 function! s:StepOrReset(char) dict abort
     if !l:self.StepToChild(a:char)
-                \ || (l:self.current.children == {} && !l:self.AtWildcard())
+        call l:self.Reset()
+        call l:self.StepToChild(a:char)
+    endif
+    if l:self.current.children == {} && !l:self.AtWildcard()
         call l:self.Reset()
     endif
 endfunction
