@@ -127,6 +127,10 @@ and more.
 
 ### Defaults
 
+**Note:** The following code is only here to summarize the available options
+and show what Pear Tree sets them to by default. You only need to copy it to
+your config if you intend to change values of the variables or key mappings.
+
 ```vim
 " Default rules for matching:
 let g:pear_tree_pairs = {
