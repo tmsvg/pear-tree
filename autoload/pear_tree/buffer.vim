@@ -48,9 +48,9 @@ endfunction
 " list.
 function! pear_tree#buffer#ReverseSearch(string, start_pos, ...) abort
     let l:skip_regions = a:0 ? a:1 : []
-    let l:lnum = a:start_position[0]
+    let l:lnum = a:start_pos[0]
     let l:line = getline(l:lnum)
-    let l:col = strridx(l:line, a:string, a:start_position[1])
+    let l:col = strridx(l:line, a:string, a:start_pos[1])
     while l:lnum > 1 && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
         if l:col == -1
             let l:lnum = l:lnum - 1
