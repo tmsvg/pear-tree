@@ -112,6 +112,21 @@ behavior.
              Typing `<img />` does not yield `<img /></img>` because the `/`
              in the opener matches the regexp pattern `'/$'`.
 
+    not_at ~
+    Form: `'not_at': [regexp, ...]`
+    Function: Do not match an opener if it is typed at text that matches any
+              of the patterns in the list. See |pattern| for valid patterns.
+              If the value is `[]`, the opener is paired no matter what text
+              comes before it.
+    Example: `'f"': {'closer': '"', 'not_at': ['\w']}`
+              The opening string `f"` is only paired with `"` if it is not
+              typed after a word character (letter, number, or underscore).
+    If not set, the value is `[]`, with one exception: the default value is
+    `['\w']` for any pair whose closing string is the same as its opening string
+    (e.g. `'` and `"`). This is because quote-like characters placed directly
+    after words are often meant to act as the closing side of the pair rather
+    than the opening side.
+
     until ~
     Form: `'until': regexp`
     Function: Replace the wildcard character in the closer with the wildcard

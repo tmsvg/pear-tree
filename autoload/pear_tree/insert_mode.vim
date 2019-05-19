@@ -92,23 +92,18 @@ endfunction
 
 
 function! s:ValidBefore(opener, closer) abort
-    let l:prev_char = pear_tree#cursor#PrevChar()
-    let l:prev_text = pear_tree#cursor#TextBefore()
-    let l:is_dumb = pear_tree#IsDumbPair(a:opener)
+    let l:len = strlen(a:opener)
+    let l:text_before_cursor = pear_tree#cursor#TextBefore()
+    let l:text_before_opener = l:text_before_cursor[:-l:len]
 
-    " Don't close `"` in VimL if the cursor is on an empty line or preceded
-    " by multiple spaces or a tab character.
-    if &filetype ==? 'vim' && a:opener ==# '"'
-                \ && (pear_tree#string#Trim(l:prev_text) ==# ''
-                \     || l:prev_char =~# '\t'
-                \     || l:prev_text[-2:] =~# '\s\{2}')
+    let l:not_at = pear_tree#GetRule(a:opener, 'not_at')
+    if l:not_at != [] && l:text_before_opener =~# join(l:not_at, '$\|') . '$'
         return 0
-    elseif !l:is_dumb
+    elseif !pear_tree#IsDumbPair(a:opener)
         return 1
-    elseif l:prev_text[-strlen(a:opener):] ==# a:opener
+    elseif l:text_before_cursor[-l:len:] ==# a:opener
         return 0
-    elseif l:prev_text[:-strlen(a:opener)][-1:] =~# '\w'
-                \ || pear_tree#IsCloser(l:prev_text[:-strlen(a:opener)][-1:])
+    elseif pear_tree#IsCloser(l:text_before_opener[-1:])
         return 0
     else
         return 1
@@ -209,13 +204,13 @@ endfunction
 
 " Determine if Pear Tree should auto-close an opener of length > 1.
 function! s:ShouldCloseComplexOpener(opener, closer, wildcard, traverser) abort
-    let l:prev_text = pear_tree#cursor#TextBefore()
+    let l:text_before_cursor = pear_tree#cursor#TextBefore()
     let l:is_dumb = pear_tree#IsDumbPair(a:opener)
 
     " The wildcard string can span multiple lines, but the opener
     " should not be terminated when the terminating character is the only
     " character on the line.
-    if strlen(pear_tree#string#Trim(l:prev_text)) == 0
+    if l:text_before_cursor =~# '^\s*$'
         return 0
     endif
 

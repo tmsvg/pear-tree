@@ -13,6 +13,7 @@ let s:pear_tree_default_rules = {
             \ 'not_in': [],
             \ 'not_if': [],
             \ 'not_like': '',
+            \ 'not_at': [],
             \ 'until': '[[:punct:][:space:]]'
             \ }
 
@@ -48,7 +49,11 @@ endfunction
 
 function! pear_tree#GetRule(opener, rule) abort
     let l:rules = get(pear_tree#Pairs(), a:opener)
-    return get(l:rules, a:rule, s:pear_tree_default_rules[a:rule])
+    let l:default = copy(s:pear_tree_default_rules[a:rule])
+    if a:rule ==# 'not_at' && pear_tree#IsDumbPair(a:opener)
+        call add(l:default, '\w')
+    endif
+    return get(l:rules, a:rule, l:default)
 endfunction
 
 

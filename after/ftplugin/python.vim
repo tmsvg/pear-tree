@@ -15,25 +15,23 @@ endif
 
 let b:pear_tree_pairs = extend(deepcopy(g:pear_tree_pairs), {
             \ '`': {'closer': '`'},
-            \ 'r"': {'closer': '"'},
-            \ 'R"': {'closer': '"'},
-            \ 'u"': {'closer': '"'},
-            \ 'U"': {'closer': '"'},
-            \ 'f"': {'closer': '"'},
-            \ 'F"': {'closer': '"'},
-            \ 'b"': {'closer': '"'},
-            \ 'B"': {'closer': '"'},
-            \ "r'": {'closer': "'"},
-            \ "R'": {'closer': "'"},
-            \ "u'": {'closer': "'"},
-            \ "U'": {'closer': "'"},
-            \ "f'": {'closer': "'"},
-            \ "F'": {'closer': "'"},
-            \ "b'": {'closer': "'"},
-            \ "B'": {'closer': "'"},
             \ '"""': {'closer': '"""'},
             \ "'''": {'closer': "'''"},
             \ }, 'keep')
+
+let s:patterns = ['[^bBfFrRuU\W]',
+            \     '\w\{3,}',
+            \     '\w[bBuU]',
+            \     '[^rR\W][fF]',
+            \     '[^fF\W][rR]']
+if has_key(b:pear_tree_pairs, '"')
+    let b:pear_tree_pairs['"']['not_at'] = get(b:pear_tree_pairs['"'], 'not_at', []) + s:patterns
+endif
+if has_key(b:pear_tree_pairs, '''')
+    let b:pear_tree_pairs['''']['not_at'] = get(b:pear_tree_pairs[''''], 'not_at', []) + s:patterns
+endif
+
+unlet s:patterns
 
 let &cpoptions = s:save_cpo
 unlet s:save_cpo
