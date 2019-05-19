@@ -20,10 +20,10 @@ let b:pear_tree_pairs = extend(deepcopy(g:pear_tree_pairs), {
             \ }, 'keep')
 
 let s:patterns = ['[^bBfFrRuU\W]',
-            \     '\w\{3,}',
-            \     '\w[bBuU]',
-            \     '[^rR\W][fF]',
-            \     '[^fF\W][rR]']
+                \ '\w\{3,}',
+                \ '\w[bBuU]',
+                \ '[^rR\W][fF]',
+                \ '[^fF\W][rR]']
 if has_key(b:pear_tree_pairs, '"')
     let b:pear_tree_pairs['"']['not_at'] = get(b:pear_tree_pairs['"'], 'not_at', []) + s:patterns
 endif

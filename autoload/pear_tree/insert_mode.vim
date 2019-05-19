@@ -159,15 +159,15 @@ function! s:ShouldCloseSimpleOpener(char) abort
     let l:ignore = l:ignore - pear_tree#string#Count(l:strings_to_expand, a:char)
 
     let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer,
-                \                             [line('.'), col('.') - 1],
-                \                             l:timeout_length)
+                                            \ [line('.'), col('.') - 1],
+                                            \ l:timeout_length)
     if l:closer_pos == [-1, -1] && l:ignore > 0
         let l:closer_pos = pear_tree#cursor#Position()
     else
         let l:opener_pos = pear_tree#IsBalancedPair(a:char, '',
-                    \                               l:closer_pos,
-                    \                               l:ignore,
-                    \                               l:timeout_length)
+                                                  \ l:closer_pos,
+                                                  \ l:ignore,
+                                                  \ l:timeout_length)
         if l:opener_pos == [-1, -1]
             let l:opener_pos = [1, 0]
         elseif l:opener_pos == [0, 0]
@@ -175,8 +175,8 @@ function! s:ShouldCloseSimpleOpener(char) abort
             return 0
         endif
         let l:closer_pos = pear_tree#GetOuterPair(a:char, l:closer,
-                    \                             l:opener_pos,
-                    \                             l:timeout_length)
+                                                \ l:opener_pos,
+                                                \ l:timeout_length)
         if l:closer_pos == [0, 0]
             " Function timed out
             return 1
@@ -184,9 +184,9 @@ function! s:ShouldCloseSimpleOpener(char) abort
     endif
     return l:closer_pos[0] == -1
                 \ || pear_tree#IsBalancedPair(a:char, '',
-                \                             l:closer_pos,
-                \                             l:ignore,
-                \                             l:timeout_length) != [-1, -1]
+                                            \ l:closer_pos,
+                                            \ l:ignore,
+                                            \ l:timeout_length) != [-1, -1]
 endfunction
 
 
@@ -239,13 +239,13 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard, traverser) abort
 
     if a:wildcard !=# ''
         let l:closer_pos = pear_tree#GetOuterWildcardPair(a:opener, a:closer,
-                    \                                     l:trimmed_wildcard,
-                    \                                     l:cursor_pos,
-                    \                                     l:timeout_length)
+                                                        \ l:trimmed_wildcard,
+                                                        \ l:cursor_pos,
+                                                        \ l:timeout_length)
     else
         let l:closer_pos = pear_tree#GetOuterPair(a:opener, a:closer,
-                    \                             l:cursor_pos,
-                    \                             l:timeout_length)
+                                                \ l:cursor_pos,
+                                                \ l:timeout_length)
     endif
     " Ignore closers that are pending in s:strings_to_expand
     let l:ignore = pear_tree#string#Count(join(s:strings_to_expand, ''), a:closer)
@@ -261,8 +261,8 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard, traverser) abort
     endif
     return pear_tree#buffer#ComparePositions(l:closer_pos, l:cursor_pos) < 0
                 \ || pear_tree#IsBalancedPair(a:opener, l:trimmed_wildcard,
-                \                             l:closer_pos, l:ignore,
-                \                             l:timeout_length, 1) != [-1, -1]
+                                            \ l:closer_pos, l:ignore,
+                                            \ l:timeout_length, 1) != [-1, -1]
 endfunction
 
 
@@ -277,8 +277,7 @@ function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard, ...) abort
         let l:closer = l:closer[:(strlen(l:closer) - 2)]
     endif
     if s:ShouldCloseComplexOpener(a:opener, l:closer, a:wildcard, l:traverser)
-        return l:closer . repeat(s:LEFT,
-                    \            pear_tree#string#VisualLength(l:closer))
+        return l:closer . repeat(s:LEFT, pear_tree#string#VisualLength(l:closer))
     else
         return ''
     endif
@@ -300,27 +299,27 @@ function! s:ShouldSkipCloser(char) abort
         " Ignore closers that are pending in s:strings_to_expand
         let l:strings_to_expand = join(s:strings_to_expand, '')
         let l:ignore = pear_tree#string#Count(l:strings_to_expand, a:char)
-                    \  - pear_tree#string#Count(l:strings_to_expand, l:opener)
+                     \ - pear_tree#string#Count(l:strings_to_expand, l:opener)
 
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char,
-                    \                             [line('.'), col('.') - 1],
-                    \                             l:timeout_length)
+                                                \ [line('.'), col('.') - 1],
+                                                \ l:timeout_length)
         let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '',
-                    \                               l:closer_pos,
-                    \                               l:ignore,
-                    \                               l:timeout_length)
+                                                  \ l:closer_pos,
+                                                  \ l:ignore,
+                                                  \ l:timeout_length)
         let l:closer_pos = pear_tree#GetOuterPair(l:opener, a:char,
-                    \                             l:opener_pos,
-                    \                             l:timeout_length)
+                                                \ l:opener_pos,
+                                                \ l:timeout_length)
 
         if l:closer_pos[0] < 1
             let l:closer_pos = pear_tree#cursor#Position()
         endif
         let l:ignore = l:ignore + 1
         let l:opener_pos = pear_tree#IsBalancedPair(l:opener, '',
-                    \                               l:closer_pos,
-                    \                               l:ignore,
-                    \                               l:timeout_length)
+                                                  \ l:closer_pos,
+                                                  \ l:ignore,
+                                                  \ l:timeout_length)
         " IsBalancedPair returns [0, 0] if and only if it times out.
         if l:closer_pos[0] >= 0 && l:opener_pos[0] <= 0
             return 1
@@ -361,19 +360,19 @@ function! s:ShouldDeletePair() abort
     let l:ignore = pear_tree#string#Count(l:strings_to_expand, l:next_char) + 1
 
     let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char,
-                \                             [line('.'), col('.') - 1],
-                \                             l:timeout_length)
+                                            \ [line('.'), col('.') - 1],
+                                            \ l:timeout_length)
     let l:opener_pos = pear_tree#IsBalancedPair(l:prev_char, '',
-                \                               l:closer_pos,
-                \                               l:ignore, l:timeout_length)
+                                              \ l:closer_pos,
+                                              \ l:ignore, l:timeout_length)
     let l:opener_pos[1] += 1
     let l:closer_pos = pear_tree#GetOuterPair(l:prev_char, l:next_char,
-                \                             l:opener_pos, l:timeout_length)
+                                            \ l:opener_pos, l:timeout_length)
 
     if l:closer_pos[0]
         return pear_tree#IsBalancedPair(l:prev_char, '',
-                    \                   l:closer_pos,
-                    \                   l:ignore, l:timeout_length)[0] < 1
+                                      \ l:closer_pos,
+                                      \ l:ignore, l:timeout_length)[0] < 1
     else
         return 0
     endif
@@ -464,7 +463,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
         let l:opener_end = s:RIGHT
     elseif has_key(pear_tree#Pairs(), a:char)
                 \ && (b:pear_tree_traverser.AtRoot() || b:pear_tree_traverser.AtWildcard()
-                \     || !pear_tree#trie#HasChild(b:pear_tree_traverser.GetCurrent(), a:char))
+                    \ || !pear_tree#trie#HasChild(b:pear_tree_traverser.GetCurrent(), a:char))
         let l:opener_end = a:char . pear_tree#insert_mode#CloseSimpleOpener(a:char)
     else
         let l:opener_end = a:char
@@ -476,7 +475,7 @@ function! pear_tree#insert_mode#TerminateOpener(char) abort
     if b:pear_tree_traverser.AtWildcard()
                 \ && !pear_tree#trie#HasChild(b:pear_tree_traverser.GetCurrent(), a:char)
                 \ && filter(keys(pear_tree#Pairs()),
-                \           'strlen(v:val) > 1 && v:val[-1:] ==# a:char') != []
+                          \ 'strlen(v:val) > 1 && v:val[-1:] ==# a:char') != []
         let l:save_traverser = deepcopy(b:pear_tree_traverser)
         let l:start_pos = copy(s:traverser_start_pos)
         let l:start_pos[1] += 1

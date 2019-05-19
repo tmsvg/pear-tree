@@ -192,14 +192,14 @@ function! pear_tree#IsBalancedPair(opener, wildcard, start, ...) abort
                 let l:opener_pos = l:end_pos
             else
                 let l:opener_pos = pear_tree#buffer#ReverseSearch(l:opener_hint,
-                            \                                     l:current_pos,
-                            \                                     l:not_in)
+                                                                \ l:current_pos,
+                                                                \ l:not_in)
             endif
         endif
         if pear_tree#buffer#ComparePositions(l:closer_pos, l:current_pos) > 0
             let l:closer_pos = pear_tree#buffer#ReverseSearch(l:closer,
-                        \                                     l:current_pos,
-                        \                                     l:not_in)
+                                                            \ l:current_pos,
+                                                            \ l:not_in)
         endif
         if l:closer_pos[0] != -1
                     \ && pear_tree#buffer#ComparePositions([l:closer_pos[0], l:closer_pos[1] + l:closer_offset], l:opener_pos) >= 0
@@ -325,8 +325,8 @@ function! pear_tree#GetOuterWildcardPair(opener, closer, wildcard, start, ...) a
     let l:end = pear_tree#buffer#End()
     while l:opener_pos != [-1, -1]
                 \ && (pear_tree#buffer#ComparePositions(l:opener_pos, l:closer_pos) < 0
-                \     || l:traverser.WeakTraverseBuffer(l:opener_pos, l:end) == [-1, -1]
-                \     || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
+                    \ || l:traverser.WeakTraverseBuffer(l:opener_pos, l:end) == [-1, -1]
+                    \ || pear_tree#GenerateCloser(l:traverser.GetString(), a:wildcard, [0, 0]) !=# a:closer)
         if l:timeout_length > 0 && s:TimeElapsed(l:start_time) >= l:timeout_length
             return [0, 0]
         endif
