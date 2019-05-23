@@ -73,7 +73,13 @@ endfunction
 
 
 function! pear_tree#buffer#MinPosition(list) abort
-    return sort(a:list, 'pear_tree#buffer#ComparePositions')[0]
+    let l:min_pos = a:list[0]
+    for l:pos in a:list[1:]
+        if pear_tree#buffer#ComparePositions(l:pos, l:min_pos) < 0
+            let l:min_pos = l:pos
+        endif
+    endfor
+    return copy(l:min_pos)
 endfunction
 
 
