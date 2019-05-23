@@ -270,11 +270,13 @@ function! pear_tree#insert_mode#CloseComplexOpener(opener, wildcard, ...) abort
     let l:traverser = a:0 ? a:1 : b:pear_tree_traverser
     let l:pos = pear_tree#cursor#Position()
     let l:closer = pear_tree#GenerateCloser(a:opener, a:wildcard, l:pos)
-    let l:end_char = l:closer[-1:]
-    if pear_tree#IsCloser(l:end_char)
-                \ && l:end_char !=# a:opener[-1:]
-                \ && pear_tree#insert_mode#HandleCloser(l:end_char) !=# l:end_char
-        let l:closer = l:closer[:(strlen(l:closer) - 2)]
+    let l:filter = 'pear_tree#string#EndsWith(l:closer, v:val[''closer''])'
+    let l:ends_in_closer = filter(values(pear_tree#Pairs()), l:filter)
+    if l:ends_in_closer != [] && l:closer[-1:] !=# a:opener[-1:]
+        let l:pair_at_cursor = pear_tree#GetSurroundingPair()
+        if l:pair_at_cursor != [] && pear_tree#string#EndsWith(l:closer, l:pair_at_cursor[1])
+            let l:closer = l:closer[:-strlen(l:pair_at_cursor[1]) - 1]
+        endif
     endif
     if s:ShouldCloseComplexOpener(a:opener, l:closer, a:wildcard, l:traverser)
         return l:closer . repeat(s:LEFT, pear_tree#string#VisualLength(l:closer))

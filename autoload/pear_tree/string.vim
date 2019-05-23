@@ -37,6 +37,11 @@ else
 endif
 
 
+function! pear_tree#string#EndsWith(string, substring)
+    return a:string =~# a:substring . '$'
+endfunction
+
+
 " Return {string} with all occurrences of {special_char} escaped and all
 " occurrences of {replacement} replaced with unescaped {special_char}.
 function! pear_tree#string#Decode(string, special_char, replacement) abort
