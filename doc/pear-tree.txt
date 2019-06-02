@@ -58,7 +58,7 @@ Default: { ~
 Define the opening strings and the closers with which they are to be matched.
 Buffer-local rules take priority over global rules. Define `b:pear_tree_pairs`
 in the appropriate file in your ftplugin folder to override the default rules
-for certain filetypes.
+for certain filetypes (see |pear-tree-filetype-settings|).
 
 Each rule in the dictionary has the following form: >
     opener_string: {'closer': closer_string, [options ...]}
@@ -138,6 +138,46 @@ behavior.
              matches the regexp pattern `'\W'`.
     If not set, the value is `'[[:punct:][:space:]]'` (punctuation or space).
 
+Filetype-Specific Rules:                         *pear-tree-filetype-settings*
+                                                    *b:pear_tree_did_ftplugin*
+
+You will likely want to define different sets of pairing rules for different
+programming languages. Recall that |g:pear_tree_pairs| is defined once and
+used for every file regardless of its |filetype|. To account for different
+filetypes, you should instead define a buffer-local |b:pear_tree_pairs| within
+either a |ftplugin| file or a |FileType| autocmd.
+
+When using ftplugins, it is best to place them in the |after-directory| to
+ensure that they will not be overridden by Pear Tree's default ftplugins
+However, it is possible to prevent Pear Tree from overriding ftplugins placed
+elsewhere as well. To do this, set `b:pear_tree_did_{ft}_ftplugin` to `1`
+within the ftplugin for the filetype {ft}:
+>
+    " ~/.vim/ftplugin/html.vim
+    " Prevent Pear Tree from loading its default HTML ftplugin
+    let b:pear_tree_loaded_html_ftplugin = 1
+
+    let b:pear_tree_pairs = {
+                \ 'foo': {'closer': 'bar'},
+                \ }
+<
+Setting this variable is not necessary when using the |after-directory|:
+>
+    " ~/.vim/after/ftplugin/html.vim
+    let b:pear_tree_pairs = {
+                \ 'foo': {'closer': 'bar'},
+                \ }
+<
+FileType autocmds also work:
+>
+    " $MYVIMRC
+    augroup html_pairs
+        autocmd!
+        autocmd FileType html let b:pear_tree_pairs = {
+                    \ 'foo': {'closer': 'bar'},
+                    \ }
+    augroup END
+<
 ------------------------------------------------------------------------------
                                                      *g:pear_tree_ft_disabled*
 Type: list ~
