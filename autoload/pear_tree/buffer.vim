@@ -29,10 +29,12 @@ function! pear_tree#buffer#Search(string, start_pos, ...) abort
     let l:lnum = a:start_pos[0]
     let l:line = getline(l:lnum)
     let l:col = stridx(l:line, a:string, a:start_pos[1])
-    while l:lnum <= l:end[0] && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
+    while l:lnum <= l:end[0]
         if l:col == -1
             let l:lnum = l:lnum + 1
             let l:line = getline(l:lnum)
+        elseif !s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions)
+            break
         endif
         let l:col = stridx(l:line, a:string, l:col + 1)
     endwhile
@@ -51,11 +53,13 @@ function! pear_tree#buffer#ReverseSearch(string, start_pos, ...) abort
     let l:lnum = a:start_pos[0]
     let l:line = getline(l:lnum)
     let l:col = strridx(l:line, a:string, a:start_pos[1])
-    while l:lnum > 1 && (l:col == -1 || s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions))
+    while l:lnum >= 1
         if l:col == -1
             let l:lnum = l:lnum - 1
             let l:line = getline(l:lnum)
             let l:col = strlen(l:line)
+        elseif !s:ShouldSkip([l:lnum, l:col + 1], l:skip_regions)
+            break
         endif
         let l:col = strridx(l:line, a:string, l:col - 1)
     endwhile
