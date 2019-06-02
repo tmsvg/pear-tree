@@ -131,6 +131,7 @@ function! s:CreatePlugMappings()
     inoremap <silent> <expr> <buffer> <Plug>(PearTreeExpandOne) pear_tree#insert_mode#ExpandOne()
     inoremap <silent> <expr> <buffer> <Plug>(PearTreeJump) pear_tree#insert_mode#JumpOut()
     inoremap <silent> <expr> <buffer> <Plug>(PearTreeJNR) pear_tree#insert_mode#JumpNReturn()
+    inoremap <silent> <expr> <buffer> <Plug>(PearTreeSpace) pear_tree#insert_mode#Space()
 endfunction
 
 

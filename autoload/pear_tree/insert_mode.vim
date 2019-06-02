@@ -453,6 +453,21 @@ function! pear_tree#insert_mode#ExpandOne() abort
 endfunction
 
 
+function! pear_tree#insert_mode#Space() abort
+    let l:pair = pear_tree#GetSurroundingPair()
+    if l:pair == [] || pear_tree#IsDumbPair(l:pair[0])
+        return "\<Space>"
+    endif
+    let l:opener_pos = l:pair[3]
+    let l:cursor_pos = pear_tree#cursor#Position()
+    if l:opener_pos == [l:cursor_pos[0], l:cursor_pos[1] - 2]
+        return "\<Space>\<Space>" . s:LEFT
+    else
+        return "\<Space>"
+    endif
+endfunction
+
+
 " Called when pressing the last character in an opening string. The function
 " returns {char} as well as the corresponding closing string if {char}
 " completes an opening string contained in pear_tree_pairs.

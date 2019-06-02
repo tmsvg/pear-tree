@@ -283,6 +283,7 @@ MAPPINGS                                                  *pear-tree-mappings*
     <Plug>(PearTreeFinishExpansion) ........ |<Plug>(PearTreeFinishExpansion)|
     <Plug>(PearTreeJump) ................... |<Plug>(PearTreeJump)|
     <Plug>(PearTreeExpandOne) .............. |<Plug>(PearTreeExpandOne)|
+    <Plug>(PearTreeSpace) .................. |<Plug>(PearTreeSpace)|
     <Plug>(PearTreeJNR) .................... |<Plug>(PearTreeJNR)|
 
 ------------------------------------------------------------------------------
@@ -400,6 +401,33 @@ Example: >
 To set the mapping, add something like the following to your vimrc:
 >
     imap <key> <Plug>(PearTreeExpandOne)
+<
+------------------------------------------------------------------------------
+                                                       *<Plug>(PearTreeSpace)*
+Default: none ~
+
+If the cursor is between the opening and closing strings of a non-quote-like
+pair, insert a space both before and after the cursor. Otherwise insert a
+single space before the cursor.
+
+Example: >
+    1  {|}
+<
+    becomes
+>
+    1  { | }
+<
+    and
+>
+    1  "|"
+<
+    becomes
+>
+    1  " |"
+<
+To set the mapping, add something like the following to your vimrc:
+>
+    imap <key> <Plug>(PearTreeSpace)
 <
 ------------------------------------------------------------------------------
                                                         *<Plug>(PearTreeJump)*
