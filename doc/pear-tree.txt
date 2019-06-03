@@ -197,7 +197,7 @@ Type: number ~
 Default: 1 ~
 
 If the value is nonzero, Pear Tree will automatically map <BS>, <CR>, and
-<Esc> in insert mode to |<Plug>(PearTreeExpand)|, |<Plug>(PearTreeBackspace)|,
+<Esc> in insert mode to |<Plug>(PearTreeBackspace)|, |<Plug>(PearTreeExpand)|,
 and |<Plug>(PearTreeFinishExpansion)| respectively.
 
 To prevent these keys from being mapped by default, add the following to your
