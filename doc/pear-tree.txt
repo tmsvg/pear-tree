@@ -149,7 +149,7 @@ filetypes, you should instead define a buffer-local |b:pear_tree_pairs| within
 either a |ftplugin| file or a |FileType| autocmd.
 
 When using ftplugins, it is best to place them in the |after-directory| to
-ensure that they will not be overridden by Pear Tree's default ftplugins
+ensure that they will not be overridden by Pear Tree's default ftplugins.
 However, it is possible to prevent Pear Tree from overriding ftplugins placed
 elsewhere as well. To do this, set `b:pear_tree_did_{ft}_ftplugin` to `1`
 within the ftplugin for the filetype {ft}:
