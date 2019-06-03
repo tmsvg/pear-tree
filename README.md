@@ -165,6 +165,7 @@ imap <Esc> <Plug>(PearTreeFinishExpansion)
 "     :help <Plug>(PearTreeCloser)
 
 " Not mapped by default:
+" <Plug>(PearTreeSpace)
 " <Plug>(PearTreeJump)
 " <Plug>(PearTreeExpandOne)
 " <Plug>(PearTreeJNR)
