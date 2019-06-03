@@ -27,6 +27,10 @@ if !exists('g:pear_tree_ft_disabled')
     let g:pear_tree_ft_disabled = []
 endif
 
+if !exists('g:pear_tree_map_special_keys')
+    let g:pear_tree_map_special_keys = 1
+endif
+
 if !exists('g:pear_tree_repeatable_expand')
     let g:pear_tree_repeatable_expand = 1
 endif
@@ -163,8 +167,9 @@ function! s:MapDefaults()
 
     execute l:restore_keymap
 
-    " Stop here if special keys aren't mappable.
-    if stridx(&cpoptions, '<') > -1
+    " Stop here if special keys shouldn't be mapped.
+    if !get(b:, 'pear_tree_map_special_keys', get(g:, 'pear_tree_map_special_keys', 1))
+                \ || stridx(&cpoptions, '<') > -1
         return
     endif
     if !hasmapto('<Plug>(PearTreeBackspace)', 'i')

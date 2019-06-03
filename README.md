@@ -156,6 +156,9 @@ let g:pear_tree_smart_backspace = 0
 " If enabled, smart pair functions timeout after 60ms:
 let g:pear_tree_timeout = 60
 
+" Automatically map <BS>, <CR>, and <Esc>
+let g:pear_tree_map_special_keys = 1
+
 " Default mappings:
 imap <BS> <Plug>(PearTreeBackspace)
 imap <CR> <Plug>(PearTreeExpand)

@@ -37,6 +37,7 @@ OPTIONS                                                    *pear-tree-options*
 
     g:pear_tree_pairs ...................... |g:pear_tree_pairs|
     g:pear_tree_ft_disabled ................ |g:pear_tree_ft_disabled|
+    g:pear_tree_map_special_keys ........... |g:pear_tree_map_special_keys|
     g:pear_tree_repeatable_expand .......... |g:pear_tree_repeatable_expand|
     g:pear_tree_smart_openers .............. |g:pear_tree_smart_openers|
     g:pear_tree_smart_closers .............. |g:pear_tree_smart_closers|
@@ -190,6 +191,21 @@ To change the default value, add something like the following to your vimrc:
     let g:pear_tree_ft_disabled = ['c', 'python', 'markdown']
 <
 ------------------------------------------------------------------------------
+                                                *g:pear_tree_map_special_keys*
+                                                *b:pear_tree_map_special_keys*
+Type: number ~
+Default: 1 ~
+
+If the value is nonzero, Pear Tree will automatically map <BS>, <CR>, and
+<Esc> in insert mode to |<Plug>(PearTreeExpand)|, |<Plug>(PearTreeBackspace)|,
+and |<Plug>(PearTreeFinishExpansion)| respectively.
+
+To prevent these keys from being mapped by default, add the following to your
+vimrc:
+>
+    let g:pear_tree_map_special_keys = 0
+<
+------------------------------------------------------------------------------
                                                *g:pear_tree_repeatable_expand*
                                                *b:pear_tree_repeatable_expand*
 Type: number ~
@@ -199,7 +215,7 @@ If the value is nonzero, expanding pairs will be dot-repeatable. This requires
 the text after the cursor to be erased until |<Plug>(PearTreeFinishExpansion)|
 is triggered.
 
-If this value is 0, the text after the cursor will immediately be moved to the
+If the value is 0, the text after the cursor will immediately be moved to the
 next line. This is the typical behavior of other plugins and text editors, but
 limitations of the |.| command lead to unexpected behavior as a result:
 
