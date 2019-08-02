@@ -91,8 +91,10 @@ function! pear_tree#insert_mode#OnCursorMovedI() abort
 endfunction
 
 
-function! s:ValidBefore(opener, closer) abort
-    let l:len = strlen(a:opener)
+function! s:ValidBefore(opener, closer, ...) abort
+    let l:wildcard = a:0 ? a:1 : ''
+    let l:encodedOpener = pear_tree#string#Encode(a:opener, '*', l:wildcard)
+    let l:len = strlen(l:encodedOpener)
     let l:text_before_cursor = pear_tree#cursor#TextBefore()
     let l:text_before_opener = l:text_before_cursor[:-l:len]
 
@@ -214,7 +216,7 @@ function! s:ShouldCloseComplexOpener(opener, closer, wildcard, traverser) abort
         return 0
     endif
 
-    let l:valid_before = s:ValidBefore(a:opener, a:closer)
+    let l:valid_before = s:ValidBefore(a:opener, a:closer, a:wildcard)
     let l:valid_after = s:ValidAfter(a:opener, a:closer, a:traverser)
 
     if !l:valid_before || !l:valid_after
