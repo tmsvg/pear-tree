@@ -437,9 +437,11 @@ function! pear_tree#insert_mode#JumpOut() abort
     if l:pair == []
         return ''
     endif
-    let [l:opener, l:closer, l:wildcard] = l:pair[:2]
+    let l:col = col('.')
+    let [l:opener, l:closer, l:wildcard, l:pos] = l:pair
     let l:closer = pear_tree#GenerateCloser(l:opener, l:wildcard, [0, 0])
-    return repeat(s:RIGHT, pear_tree#string#VisualLength(l:closer))
+    let l:num_spaces = stridx(getline('.'), l:closer, l:col - 1) - l:col + 1
+    return repeat(s:RIGHT, pear_tree#string#VisualLength(l:closer) + l:num_spaces)
 endfunction
 
 

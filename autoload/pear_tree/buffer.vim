@@ -76,6 +76,17 @@ function! pear_tree#buffer#ComparePositions(pos1, pos2) abort
 endfunction
 
 
+function! pear_tree#buffer#MaxPosition(list) abort
+    let l:max_pos = a:list[0]
+    for l:pos in a:list[1:]
+        if pear_tree#buffer#ComparePositions(l:pos, l:min_pos) > 0
+            let l:max_pos = l:pos
+        endif
+    endfor
+    return copy(l:max_pos)
+endfunction
+
+
 function! pear_tree#buffer#MinPosition(list) abort
     let l:min_pos = a:list[0]
     for l:pos in a:list[1:]
