@@ -238,7 +238,7 @@ endfunction
 " wildcard string and the position of the opener.
 function! pear_tree#GetSurroundingPair() abort
     let l:pairs = pear_tree#Pairs()
-    let [l:pre, l:mid, l:end] = ['^\(\s\)*\(', '\)\?\(.*\)\?\(', '\)']
+    let [l:pre, l:mid, l:end] = ['\V\^\(\s\)\*\(', '\)\?\(\.\*\)\?\(', '\)']
     let [l:lnum, l:col] = [line('.'), col('.') - 1]
     let l:line = getline(l:lnum)
 
