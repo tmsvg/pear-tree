@@ -51,7 +51,7 @@ function! pear_tree#GetRule(opener, rule) abort
     let l:rules = get(pear_tree#Pairs(), a:opener)
     let l:default = copy(s:pear_tree_default_rules[a:rule])
     if a:rule ==# 'not_at' && pear_tree#IsDumbPair(a:opener)
-        call add(l:default, '\w')
+        call add(l:default, '[a-zA-Z0-9_!?.;]')
     endif
     return get(l:rules, a:rule, l:default)
 endfunction

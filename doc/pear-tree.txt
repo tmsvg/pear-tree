@@ -123,10 +123,11 @@ behavior.
               The opening string `f"` is only paired with `"` if it is not
               typed after a word character (letter, number, or underscore).
     If not set, the value is `[]`, with one exception: the default value is
-    `['\w']` for any pair whose closing string is the same as its opening string
-    (e.g. `'` and `"`). This is because quote-like characters placed directly
-    after words are often meant to act as the closing side of the pair rather
-    than the opening side.
+    `['[a-zA-Z0-9_!?.;]']` for any pair whose closing string is the same as
+    its opening string (e.g. `"`). This is because quote-like characters
+    placed directly after words or certain punctuation characters are most
+    often intended to act as the closing side of the pair rather than the
+    opening side.
 
     until ~
     Form: `'until': regexp`
